@@ -1,33 +1,63 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { generateId } from '../utils/storage'
 
 const STAGES = [
-  { key: 'group',   label: 'Group Stage',   icon: '📋' },
-  { key: 'quarter', label: 'Quarter Finals', icon: '⚔️' },
-  { key: 'semi',    label: 'Semi Finals',    icon: '🔥' },
-  { key: 'final',   label: 'Final',          icon: '🏆' },
+  { key: 'group', label: 'Group Stage', icon: '📋', hint: 'Round-robin fixtures inside each group' },
+  { key: 'quarter', label: 'Quarter Finals', icon: '⚔️', hint: 'First knockout round' },
+  { key: 'semi', label: 'Semi Finals', icon: '🔥', hint: 'Last four battle it out' },
+  { key: 'final', label: 'Final', icon: '🏆', hint: 'Championship match' },
 ]
 
 const GROUP_COLORS = [
-  { border: '#c9960f', bg: '#1a1200', label: 'var(--gold)' },
-  { border: '#1a7a4a', bg: '#001a0e', label: '#4cdf8a' },
-  { border: '#1a4a9a', bg: '#00081a', label: '#6aaeff' },
-  { border: '#8a1a8a', bg: '#150015', label: '#e07ae0' },
-  { border: '#9a4a1a', bg: '#1a0800', label: '#f0a060' },
-  { border: '#1a7a7a', bg: '#001515', label: '#60e0e0' },
-  { border: '#6a1a1a', bg: '#180000', label: '#e06060' },
-  { border: '#4a6a1a', bg: '#0a1400', label: '#a0d060' },
+  { border: '#c9960f', bg: 'rgba(201,150,15,0.08)', label: 'var(--gold)', glow: 'rgba(201,150,15,0.16)' },
+  { border: '#1a7a4a', bg: 'rgba(26,122,74,0.10)', label: '#4cdf8a', glow: 'rgba(76,223,138,0.16)' },
+  { border: '#1a4a9a', bg: 'rgba(26,74,154,0.10)', label: '#6aaeff', glow: 'rgba(106,174,255,0.16)' },
+  { border: '#8a1a8a', bg: 'rgba(138,26,138,0.10)', label: '#e07ae0', glow: 'rgba(224,122,224,0.16)' },
+  { border: '#9a4a1a', bg: 'rgba(154,74,26,0.10)', label: '#f0a060', glow: 'rgba(240,160,96,0.16)' },
+  { border: '#1a7a7a', bg: 'rgba(26,122,122,0.10)', label: '#60e0e0', glow: 'rgba(96,224,224,0.16)' },
+  { border: '#6a1a1a', bg: 'rgba(106,26,26,0.10)', label: '#e06060', glow: 'rgba(224,96,96,0.16)' },
+  { border: '#4a6a1a', bg: 'rgba(74,106,26,0.10)', label: '#a0d060', glow: 'rgba(160,208,96,0.16)' },
 ]
 
 function roundRobin(ids) {
   const pairs = []
-  for (let i = 0; i < ids.length; i++)
-    for (let j = i + 1; j < ids.length; j++)
-      pairs.push([ids[i], ids[j]])
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) pairs.push([ids[i], ids[j]])
+  }
   return pairs
 }
 
-// ── Inline Score Entry Component ──
+function StatCard({ label, value, sub, accent = 'var(--gold)' }) {
+  return (
+    <div style={{
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 18,
+      padding: '18px 18px 16px',
+      position: 'relative',
+      overflow: 'hidden',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+    }}>
+      <div style={{ position: 'absolute', inset: '0 auto auto 0', width: 72, height: 72, borderRadius: '50%', background: `${accent}18`, filter: 'blur(6px)', transform: 'translate(-18px,-18px)' }} />
+      <p style={{ color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, position: 'relative' }}>{label}</p>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, position: 'relative' }}>
+        <span style={{ fontFamily: 'Bebas Neue', fontSize: 34, color: 'var(--text-primary)', letterSpacing: 1 }}>{value}</span>
+      </div>
+      {sub && <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4, position: 'relative' }}>{sub}</p>}
+    </div>
+  )
+}
+
+function SectionTitle({ eyebrow, title, sub }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      {eyebrow && <p style={{ color: 'var(--gold)', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>{eyebrow}</p>}
+      <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 26, letterSpacing: 1.5, color: 'var(--text-primary)', marginBottom: 4 }}>{title}</h3>
+      {sub && <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{sub}</p>}
+    </div>
+  )
+}
+
 function ScoreEntry({ fixture, playerName, onSave, onCancel }) {
   const [home, setHome] = useState(fixture.played ? String(fixture.homeScore) : '')
   const [away, setAway] = useState(fixture.played ? String(fixture.awayScore) : '')
@@ -37,7 +67,7 @@ function ScoreEntry({ fixture, playerName, onSave, onCancel }) {
     const h = parseInt(home, 10)
     const a = parseInt(away, 10)
     if (isNaN(h) || isNaN(a) || h < 0 || a < 0) {
-      setErr('Enter valid scores (0 or above).')
+      setErr('Enter valid scores from 0 upward.')
       return
     }
     onSave(h, a)
@@ -45,58 +75,59 @@ function ScoreEntry({ fixture, playerName, onSave, onCancel }) {
 
   return (
     <div style={{
-      marginTop: 8, padding: '14px 16px',
-      background: '#0a1a0a', borderRadius: 10,
-      border: '1px solid var(--gold)',
-      display: 'flex', flexDirection: 'column', gap: 10,
+      marginTop: 0,
+      padding: 16,
+      background: 'linear-gradient(180deg, rgba(255,215,0,0.07), rgba(0,0,0,0.18))',
+      border: '1px solid rgba(255,215,0,0.25)',
+      borderTop: 'none',
+      borderRadius: '0 0 16px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12,
     }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)', marginBottom: 2 }}>
-        ENTER SCORE
-      </p>
+      <div>
+        <p style={{ fontFamily: 'Bebas Neue', fontSize: 18, color: 'var(--gold)', letterSpacing: 1.4 }}>ENTER RESULT</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Tap save once both scores are entered.</p>
+      </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* Home */}
-        <span style={{ flex: 1, fontWeight: 700, fontSize: 14, textAlign: 'right' }}>
-          {playerName(fixture.homeId)}
-        </span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+          <span style={{ fontWeight: 700, fontSize: 14, textAlign: 'right' }}>{playerName(fixture.homeId)}</span>
+          <input
+            type="number"
+            min="0"
+            value={home}
+            onChange={e => { setHome(e.target.value); setErr('') }}
+            autoFocus
+            style={{ width: 82, textAlign: 'center', fontSize: 24, fontFamily: 'Bebas Neue', padding: '10px 8px', color: '#111', background: '#fff', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 12 }}
+          />
+        </div>
 
-        <input
-          type="number" min="0" value={home}
-          onChange={e => { setHome(e.target.value); setErr('') }}
-          autoFocus
-          style={{ width: 60, textAlign: 'center', fontSize: 20, fontFamily: 'Bebas Neue', padding: '6px 8px', color: '#111111', background: '#ffffff', border: '1px solid var(--gold)', borderRadius: 8 }}
-        />
+        <span style={{ fontFamily: 'Bebas Neue', fontSize: 24, color: 'var(--text-muted)', marginTop: 24 }}>—</span>
 
-        <span style={{ fontFamily: 'Bebas Neue', fontSize: 18, color: 'var(--text-muted)' }}>–</span>
-
-        <input
-          type="number" min="0" value={away}
-          onChange={e => { setAway(e.target.value); setErr('') }}
-          style={{ width: 60, textAlign: 'center', fontSize: 20, fontFamily: 'Bebas Neue', padding: '6px 8px', color: '#111111', background: '#ffffff', border: '1px solid var(--gold)', borderRadius: 8 }}
-        />
-
-        {/* Away */}
-        <span style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>
-          {playerName(fixture.awayId)}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>{playerName(fixture.awayId)}</span>
+          <input
+            type="number"
+            min="0"
+            value={away}
+            onChange={e => { setAway(e.target.value); setErr('') }}
+            style={{ width: 82, textAlign: 'center', fontSize: 24, fontFamily: 'Bebas Neue', padding: '10px 8px', color: '#111', background: '#fff', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 12 }}
+          />
+        </div>
       </div>
 
       {err && <p style={{ color: 'var(--danger)', fontSize: 13 }}>⚠️ {err}</p>}
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn-gold" style={{ flex: 1 }} onClick={handleSave}>
-          ✅ Save Result
-        </button>
-        <button className="btn-ghost" style={{ flex: 1 }} onClick={onCancel}>
-          Cancel
-        </button>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button className="btn-gold" style={{ flex: '1 1 180px' }} onClick={handleSave}>✅ Save Result</button>
+        <button className="btn-ghost" style={{ flex: '1 1 140px' }} onClick={onCancel}>Cancel</button>
       </div>
     </div>
   )
 }
 
-// ── Single Fixture Row ──
-function FixtureRow({ fixture, idx, playerName, color, canEnter, canEdit, onEdit, editingId, onSave, onCancel }) {
+function FixtureCard({ fixture, idx, groupName, color, playerName, canEnter, canEdit, editingId, onEdit, onSave, onCancel, legLabel }) {
   const isEditing = editingId === fixture.id
   const clickable = fixture.played ? canEdit : canEnter
 
@@ -105,102 +136,74 @@ function FixtureRow({ fixture, idx, playerName, color, canEnter, canEdit, onEdit
       <div
         onClick={() => clickable && onEdit(fixture.id)}
         style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '10px 14px',
-          background: isEditing ? '#0a1a0a' : 'rgba(0,0,0,0.25)',
-          borderRadius: isEditing ? '10px 10px 0 0' : 8,
-          border: isEditing ? '1px solid var(--gold)' : `1px solid ${color.border}30`,
-          borderBottom: isEditing ? 'none' : undefined,
+          background: isEditing ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.03)',
+          border: isEditing ? '1px solid rgba(255,215,0,0.35)' : '1px solid rgba(255,255,255,0.08)',
+          borderRadius: isEditing ? '16px 16px 0 0' : 16,
+          padding: '14px 16px',
           cursor: clickable ? 'pointer' : 'default',
-          transition: 'background 0.15s',
+          transition: 'all 0.18s ease',
+          boxShadow: isEditing ? `0 12px 30px ${color.glow}` : 'none',
         }}
       >
-        <span style={{ fontFamily: 'Bebas Neue', fontSize: 13, color: color.label, opacity: 0.5, minWidth: 24 }}>
-          {String(idx + 1).padStart(2, '0')}
-        </span>
-
-        <span style={{ flex: 1, fontWeight: 600, fontSize: 14, textAlign: 'right' }}>
-          {playerName(fixture.homeId)}
-        </span>
-
-        {/* Score / VS badge */}
-        <div style={{
-          padding: '5px 12px', minWidth: 64, textAlign: 'center',
-          background: fixture.played ? '#1a2e00' : clickable ? '#1a1400' : '#0a140a',
-          border: `1px solid ${fixture.played ? '#3a6a00' : clickable ? '#3a2a00' : color.border}`,
-          borderRadius: 6, transition: 'all 0.15s',
-        }}>
-          {fixture.played ? (
-            <span style={{ fontFamily: 'Bebas Neue', fontSize: 16, color: '#a0d060', letterSpacing: 2 }}>
-              {fixture.homeScore} – {fixture.awayScore}
-            </span>
-          ) : (
-            <span style={{ fontFamily: 'Bebas Neue', fontSize: 13, color: clickable ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: 1 }}>
-              VS
-            </span>
-          )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: 'Bebas Neue', fontSize: 12, letterSpacing: 1.4, color: color.label }}>{groupName}</span>
+            {legLabel && <span style={{ fontSize: 10, color: 'var(--text-muted)', padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.08)' }}>{legLabel}</span>}
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Match {String(idx + 1).padStart(2, '0')}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {fixture.played && canEdit && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>✏️ Edit</span>}
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: fixture.played ? '#63db70' : '#515151' }} />
+          </div>
         </div>
 
-        <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>
-          {playerName(fixture.awayId)}
-        </span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{playerName(fixture.homeId)}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Home</div>
+          </div>
 
-        {/* Status / edit indicator */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {fixture.played && canEdit && (
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', opacity: 0.6 }}>✏️</span>
-          )}
-          <span style={{
-            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-            background: fixture.played ? '#4caf50' : '#3a3a3a',
-          }} title={fixture.played ? 'Played' : 'Pending'} />
-        </span>
+          <div style={{
+            minWidth: 86,
+            textAlign: 'center',
+            padding: '8px 12px',
+            borderRadius: 14,
+            border: `1px solid ${fixture.played ? 'rgba(99,219,112,0.35)' : 'rgba(255,215,0,0.18)'}`,
+            background: fixture.played ? 'rgba(88,150,62,0.12)' : 'rgba(255,215,0,0.06)',
+          }}>
+            {fixture.played ? (
+              <span style={{ fontFamily: 'Bebas Neue', fontSize: 24, letterSpacing: 1.2, color: 'var(--text-primary)' }}>
+                {fixture.homeScore} - {fixture.awayScore}
+              </span>
+            ) : (
+              <span style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1.6, color: clickable ? 'var(--gold)' : 'var(--text-muted)' }}>VS</span>
+            )}
+          </div>
+
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{playerName(fixture.awayId)}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Away</div>
+          </div>
+        </div>
       </div>
 
-      {/* Inline score entry */}
       {isEditing && (
-        <div style={{
-          border: '1px solid var(--gold)', borderTop: 'none',
-          borderRadius: '0 0 10px 10px', overflow: 'hidden',
-        }}>
-          <ScoreEntry
-            fixture={fixture}
-            playerName={playerName}
-            onSave={(h, a) => onSave(fixture.id, h, a)}
-            onCancel={onCancel}
-          />
-        </div>
+        <ScoreEntry fixture={fixture} playerName={playerName} onSave={(h, a) => onSave(fixture.id, h, a)} onCancel={onCancel} />
       )}
     </div>
   )
 }
 
-// ── Fixture Block (group of rows) ──
-function FixtureBlock({ label, fixtures, playerName, color, canEnter, canEdit, editingId, onEdit, onSave, onCancel }) {
+function EmptyBlock({ icon, title, sub }) {
   return (
-    <div>
-      {label && (
-        <p style={{ fontFamily: 'Bebas Neue', fontSize: 13, letterSpacing: 2, color: color.label, marginBottom: 8, opacity: 0.8 }}>
-          {label}
-        </p>
-      )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {fixtures.map((fixture, idx) => (
-          <FixtureRow
-            key={fixture.id}
-            fixture={fixture} idx={idx}
-            playerName={playerName} color={color}
-            canEnter={canEnter} canEdit={canEdit}
-            editingId={editingId}
-            onEdit={onEdit} onSave={onSave} onCancel={onCancel}
-          />
-        ))}
-      </div>
+    <div className="card" style={{ padding: 36, textAlign: 'center' }}>
+      <div style={{ fontSize: 38, marginBottom: 12 }}>{icon}</div>
+      <p style={{ fontFamily: 'Bebas Neue', fontSize: 24, letterSpacing: 1.3, color: 'var(--text-primary)' }}>{title}</p>
+      <p style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 420, margin: '6px auto 0' }}>{sub}</p>
     </div>
   )
 }
 
-// ── Main Component ──
 export default function FixtureSetup({
   players, groups, fixtures, setFixtures,
   fixtureConfig, setFixtureConfig,
@@ -210,14 +213,15 @@ export default function FixtureSetup({
   const [view, setView] = useState('group')
   const [editingId, setEditingId] = useState(null)
 
-  const fixturesGenerated = fixtures.length > 0
-  const totalFixtures = fixtures.filter(f => f.type === 'group').length
-  const playedFixtures = fixtures.filter(f => f.type === 'group' && f.played).length
+  const groupFixtures = fixtures.filter(f => f.type === 'group')
+  const fixturesGenerated = groupFixtures.length > 0
+  const totalFixtures = groupFixtures.length
+  const playedFixtures = groupFixtures.filter(f => f.played).length
+  const pendingFixtures = totalFixtures - playedFixtures
   const allPlayed = fixturesGenerated && playedFixtures === totalFixtures
 
-  // Who can do what
-  const canEnter = isAdmin || openResultEntry  // enter new result
-  const canEdit  = isAdmin                     // edit existing result
+  const canEnter = isAdmin || openResultEntry
+  const canEdit = isAdmin
 
   function playerName(id) {
     return players.find(p => p.id === id)?.name ?? '???'
@@ -227,25 +231,19 @@ export default function FixtureSetup({
     setFixtureConfig(prev => ({ ...prev, [stage]: value }))
   }
 
-  // ── Save a score ──
   function handleSave(fixtureId, homeScore, awayScore) {
-    setFixtures(prev => prev.map(f =>
-      f.id === fixtureId
-        ? { ...f, homeScore, awayScore, played: true }
-        : f
-    ))
+    setFixtures(prev => prev.map(f => (f.id === fixtureId ? { ...f, homeScore, awayScore, played: true } : f)))
     setEditingId(null)
   }
 
   function handleEdit(id) {
-    setEditingId(prev => prev === id ? null : id)
+    setEditingId(prev => (prev === id ? null : id))
   }
 
   function handleCancel() {
     setEditingId(null)
   }
 
-  // ── Generate fixtures ──
   function generateGroupFixtures() {
     const resultsEntered = fixtures.filter(f => f.played).length
     const msg = resultsEntered > 0
@@ -258,6 +256,7 @@ export default function FixtureSetup({
       const validIds = group.playerIds.filter(id => players.some(p => p.id === id))
       const pairs = roundRobin(validIds).sort(() => Math.random() - 0.5)
       const legs = fixtureConfig.group === 2 ? 2 : 1
+
       pairs.forEach((pair, pairIdx) => {
         newFixtures.push({
           id: generateId(), type: 'group', groupId: group.id,
@@ -273,6 +272,7 @@ export default function FixtureSetup({
         }
       })
     })
+
     setFixtures(newFixtures)
     setFixturesLocked(false)
     setEditingId(null)
@@ -295,14 +295,13 @@ export default function FixtureSetup({
     setFixturesLocked(false)
   }
 
-  // ── View data ──
-  const fixturesByGroup = groups.map(group => ({
+  const fixturesByGroup = useMemo(() => groups.map(group => ({
     group,
     color: GROUP_COLORS[group.colorIdx % GROUP_COLORS.length],
-    leg1: fixtures.filter(f => f.type === 'group' && f.groupId === group.id && f.leg === 1),
-    leg2: fixtures.filter(f => f.type === 'group' && f.groupId === group.id && f.leg === 2),
-    all:  fixtures.filter(f => f.type === 'group' && f.groupId === group.id),
-  }))
+    leg1: groupFixtures.filter(f => f.groupId === group.id && f.leg === 1),
+    leg2: groupFixtures.filter(f => f.groupId === group.id && f.leg === 2),
+    all: groupFixtures.filter(f => f.groupId === group.id),
+  })), [groups, groupFixtures])
 
   const maxPerGroup = Math.max(0, ...fixturesByGroup.map(g => g.all.length))
   const rounds = Array.from({ length: maxPerGroup }, (_, i) => ({
@@ -312,239 +311,376 @@ export default function FixtureSetup({
       .filter(m => m.fixture !== null),
   }))
 
-  const rowProps = { playerName, canEnter, canEdit, editingId, onEdit: handleEdit, onSave: handleSave, onCancel: handleCancel }
+  const generatedGroups = fixturesByGroup.filter(g => g.all.length > 0).length
+  const progressPct = totalFixtures ? Math.round((playedFixtures / totalFixtures) * 100) : 0
+  const previewSummary = groups.map(g => {
+    const n = g.playerIds.filter(id => players.some(p => p.id === id)).length
+    const matches = ((n * (n - 1)) / 2) * (fixtureConfig.group === 2 ? 2 : 1)
+    return { name: g.name, players: n, matches }
+  })
 
   return (
-    <div className="fade-up">
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, color: 'var(--gold)', letterSpacing: 2 }}>FIXTURES</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-          {fixturesGenerated
-            ? `${totalFixtures} group stage fixture${totalFixtures !== 1 ? 's' : ''} · ${playedFixtures} played · ${totalFixtures - playedFixtures} remaining`
-            : 'Configure legs per stage then generate fixtures.'}
-        </p>
-      </div>
+    <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <section style={{
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: 28,
+        padding: '26px 24px',
+        background: 'radial-gradient(circle at top right, rgba(255,215,0,0.16), transparent 24%), linear-gradient(135deg, rgba(8,20,8,0.96), rgba(6,12,8,0.98))',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 18px 60px rgba(0,0,0,0.28)',
+      }}>
+        <div style={{ position: 'absolute', right: -40, top: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,215,0,0.08)', filter: 'blur(18px)' }} />
+        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) minmax(300px, 0.9fr)', gap: 18 }}>
+          <div>
+            <p style={{ color: 'var(--gold)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>Stage 03 · Fixtures & Results</p>
+            <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 42, letterSpacing: 2, color: 'var(--text-primary)', lineHeight: 1, marginBottom: 10 }}>MATCH CONTROL CENTER</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 620, lineHeight: 1.6 }}>
+              Set the number of legs, generate the full group schedule, and enter scores in a cleaner matchday-style layout.
+            </p>
 
-      {/* Entry mode badge */}
-      {fixturesGenerated && (
-        <div style={{
-          background: canEnter ? '#0a1a0a' : '#1a0a0a',
-          border: `1px solid ${canEnter ? '#2a5a2a' : '#3a1a1a'}`,
-          borderRadius: 8, padding: '8px 14px', marginBottom: 16,
-          display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
-          color: canEnter ? '#6ad46a' : 'var(--text-muted)',
-        }}>
-          <span>{canEnter ? '🟢' : '🔴'}</span>
-          {isAdmin
-            ? 'You can enter and edit all results.'
-            : openResultEntry
-              ? 'Open entry is on — tap any unplayed fixture to enter a result.'
-              : 'Only admins can enter results. Ask an admin to enable open entry.'}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginTop: 18 }}>
+              <StatCard label="Total Fixtures" value={fixturesGenerated ? totalFixtures : '—'} sub={fixturesGenerated ? `${generatedGroups} groups active` : 'Not generated yet'} />
+              <StatCard label="Played" value={fixturesGenerated ? playedFixtures : '—'} sub={fixturesGenerated ? `${progressPct}% complete` : 'No results yet'} accent="#63db70" />
+              <StatCard label="Pending" value={fixturesGenerated ? pendingFixtures : '—'} sub={fixturesGenerated ? `${Math.max(0, rounds.length)} round views` : 'Awaiting generation'} accent="#6aaeff" />
+              <StatCard label="Entry Mode" value={canEnter ? 'OPEN' : 'ADMIN'} sub={canEdit ? 'Admins can edit results' : 'Results locked to admins'} accent={canEnter ? '#63db70' : '#f0a060'} />
+            </div>
+          </div>
+
+          <div style={{
+            borderRadius: 22,
+            padding: 18,
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+            border: '1px solid rgba(255,255,255,0.08)',
+            alignSelf: 'stretch',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <p style={{ fontFamily: 'Bebas Neue', fontSize: 22, letterSpacing: 1.4, color: 'var(--gold)' }}>Group Stage Progress</p>
+              <span style={{ fontFamily: 'Bebas Neue', fontSize: 22, color: 'var(--text-primary)' }}>{progressPct}%</span>
+            </div>
+            <div style={{ height: 10, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 16 }}>
+              <div style={{ width: `${progressPct}%`, height: '100%', background: 'linear-gradient(90deg, var(--gold), #76dc6f)' }} />
+            </div>
+
+            <div style={{ display: 'grid', gap: 10 }}>
+              <div style={{ padding: '12px 14px', borderRadius: 16, background: 'rgba(0,0,0,0.20)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.4 }}>Fixture Status</p>
+                <p style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{fixturesGenerated ? (fixturesLocked ? 'Locked for safe progression' : 'Ready for edits and regeneration') : 'Waiting for generation'}</p>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: 16, background: 'rgba(0,0,0,0.20)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.4 }}>Action Note</p>
+                <p style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 4 }}>
+                  {fixturesGenerated
+                    ? (allPlayed ? 'Every group match has a score. You are ready for standings and knockout setup.' : 'Tap any match card below to record the latest scoreline.')
+                    : 'Choose your leg setup below, then generate the schedule.'}
+                </p>
+              </div>
+              {fixturesGenerated && (
+                <div style={{ padding: '12px 14px', borderRadius: 16, background: canEnter ? 'rgba(76,223,138,0.08)' : 'rgba(224,96,96,0.08)', border: `1px solid ${canEnter ? 'rgba(76,223,138,0.20)' : 'rgba(224,96,96,0.20)'}` }}>
+                  <p style={{ color: canEnter ? '#76dc6f' : '#f08c8c', fontWeight: 700, fontSize: 13 }}>
+                    {isAdmin ? '🛡 Admin controls are active.' : openResultEntry ? '🟢 Public result entry is active.' : '🔒 Only admins can enter scores right now.'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      )}
+      </section>
 
-      {/* Locked banner */}
       {fixturesLocked && (
         <div style={{
-          background: '#0a1f0a', border: '1px solid #2a5a2a', borderLeft: '3px solid #4caf50',
-          borderRadius: 10, padding: '12px 18px', marginBottom: 16,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12
+          background: 'linear-gradient(90deg, rgba(76,175,80,0.12), rgba(76,175,80,0.04))',
+          border: '1px solid rgba(76,175,80,0.28)',
+          borderLeft: '4px solid #4caf50',
+          borderRadius: 18,
+          padding: '14px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 18 }}>🔒</span>
-            <div>
-              <p style={{ fontWeight: 700, color: '#4caf50', fontSize: 14 }}>Fixtures are locked</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Regeneration is disabled. Score entry is still open.</p>
-            </div>
+          <div>
+            <p style={{ color: '#63db70', fontWeight: 700, fontSize: 14 }}>Fixtures are locked</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Regeneration is disabled so the schedule stays stable. Result entry still works.</p>
           </div>
-          {isAdmin && (
-            <button className="btn-ghost" style={{ fontSize: 12, padding: '6px 12px' }} onClick={handleUnlock}>Unlock</button>
-          )}
+          {isAdmin && <button className="btn-ghost" onClick={handleUnlock}>Unlock Fixtures</button>}
         </div>
       )}
 
-      {/* Admin config card */}
-      {isAdmin && (
-        <div className="card" style={{ padding: 20, marginBottom: 20 }}>
-          <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--gold)', marginBottom: 4 }}>🎛️ LEG CONFIGURATION</p>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18 }}>
-            Set 1 or 2 legs for each stage. 2 legs means each pair plays home <em>and</em> away.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-            {STAGES.map(stage => (
-              <div key={stage.key} style={{ background: '#050e05', border: '1px solid var(--green-border)', borderRadius: 10, padding: '14px 16px' }}>
-                <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>{stage.icon}</span> {stage.label}
-                </p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {[1, 2].map(n => (
-                    <button key={n} onClick={() => setLeg(stage.key, n)} style={{
-                      flex: 1, padding: '8px 0', borderRadius: 8,
-                      border: `1px solid ${fixtureConfig[stage.key] === n ? 'var(--gold)' : 'var(--green-border)'}`,
-                      background: fixtureConfig[stage.key] === n ? '#2a1f00' : 'transparent',
-                      color: fixtureConfig[stage.key] === n ? 'var(--gold)' : 'var(--text-muted)',
-                      fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1,
-                      cursor: 'pointer', transition: 'all 0.15s',
-                    }}>{n}</button>
-                  ))}
-                </div>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>
-                  {fixtureConfig[stage.key] === 2 ? '2 legs · home & away' : '1 leg · single match'}
-                </p>
-              </div>
-            ))}
-          </div>
+      <section className="card" style={{ padding: 22 }}>
+        <SectionTitle eyebrow="Setup" title="Leg Configuration & Generation" sub="Control how many times each pairing meets before you lock the schedule." />
 
-          <div style={{ marginTop: 16, padding: '12px 16px', background: '#0a1a0a', borderRadius: 8, border: '1px solid var(--green-border)' }}>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              📊 <strong style={{ color: 'var(--text-primary)' }}>Group stage preview:</strong>{' '}
-              {groups.map(g => {
-                const n = g.playerIds.filter(id => players.some(p => p.id === id)).length
-                const matches = ((n * (n - 1)) / 2) * fixtureConfig.group
-                return `${g.name}: ${matches} match${matches !== 1 ? 'es' : ''}`
-              }).join(' · ') || 'No groups yet'}
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-            {!fixturesLocked && (
-              <>
-                <button className="btn-gold" onClick={generateGroupFixtures}>
-                  {fixturesGenerated ? '🔄 Regenerate Fixtures' : '⚽ Generate Group Fixtures'}
-                </button>
-                {fixturesGenerated && (
-                  <button className="btn-danger" style={{ padding: '10px 18px' }} onClick={resetFixtures}>🗑️ Reset All Fixtures</button>
-                )}
-              </>
-            )}
-            {fixturesGenerated && !fixturesLocked && (
-              <button className="btn-ghost" style={{ marginLeft: 'auto' }} onClick={handleLock}>🔒 Lock Fixtures</button>
-            )}
-            {allPlayed && (
-              <span style={{ background: '#0a1f0a', border: '1px solid #2a5a2a', color: '#4caf50', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 8 }}>
-                ✅ Group Stage Complete
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* View toggle */}
-      {fixturesGenerated && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          {[{ id: 'group', label: '📋 By Group' }, { id: 'round', label: '🔄 By Round' }].map(v => (
-            <button key={v.id} onClick={() => { setView(v.id); setEditingId(null) }} style={{
-              padding: '8px 18px', borderRadius: 8, cursor: 'pointer',
-              fontFamily: 'Barlow', fontWeight: 700, fontSize: 13,
-              border: `1px solid ${view === v.id ? 'var(--gold)' : 'var(--green-border)'}`,
-              background: view === v.id ? '#2a1f00' : 'transparent',
-              color: view === v.id ? 'var(--gold)' : 'var(--text-muted)',
-              transition: 'all 0.15s',
-            }}>{v.label}</button>
-          ))}
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!fixturesGenerated && (
-        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
-          <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>
-            {isAdmin ? 'Configure legs above then click Generate Group Fixtures.' : 'Fixtures have not been generated yet.'}
-          </p>
-        </div>
-      )}
-
-      {/* BY GROUP */}
-      {fixturesGenerated && view === 'group' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {fixturesByGroup.map(({ group, color, leg1, leg2, all }) => {
-            if (all.length === 0) return null
-            const legs = fixtureConfig.group
-            return (
-              <div key={group.id} style={{ background: color.bg, border: `1px solid ${color.border}`, borderRadius: 12, overflow: 'hidden' }}>
-                <div style={{ padding: '12px 18px', borderBottom: `1px solid ${color.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontFamily: 'Bebas Neue', fontSize: 20, letterSpacing: 2, color: color.label }}>{group.name}</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {all.filter(f => f.played).length}/{all.length} played
-                  </span>
-                </div>
-                <div style={{ padding: '12px 18px' }}>
-                  {legs === 2 ? (
-                    <>
-                      <FixtureBlock label="🏠 LEG 1" fixtures={leg1} color={color} {...rowProps} />
-                      <div style={{ height: 12 }} />
-                      <FixtureBlock label="✈️ LEG 2" fixtures={leg2} color={color} {...rowProps} />
-                    </>
-                  ) : (
-                    <FixtureBlock label="" fixtures={all} color={color} {...rowProps} />
-                  )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+          {STAGES.map(stage => (
+            <div key={stage.key} style={{
+              borderRadius: 18,
+              padding: 16,
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <p style={{ fontFamily: 'Bebas Neue', fontSize: 20, letterSpacing: 1.2, color: 'var(--text-primary)' }}>{stage.icon} {stage.label}</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{stage.hint}</p>
                 </div>
               </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* BY ROUND */}
-      {fixturesGenerated && view === 'round' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {rounds.map(({ roundNum, matches }) => (
-            <div key={roundNum} className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--green-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontFamily: 'Bebas Neue', fontSize: 20, letterSpacing: 2, color: 'var(--gold)' }}>ROUND {roundNum}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  {matches.filter(m => m.fixture.played).length}/{matches.length} played
-                </span>
-              </div>
-              <div style={{ padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {matches.map(({ group, color, fixture }) => (
-                  <div key={fixture.id}>
-                    <div
-                      onClick={() => (fixture.played ? canEdit : canEnter) && handleEdit(fixture.id)}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[1, 2].map(n => {
+                  const active = fixtureConfig[stage.key] === n
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => setLeg(stage.key, n)}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 14px',
-                        background: editingId === fixture.id ? '#0a1a0a' : color.bg,
-                        border: editingId === fixture.id ? '1px solid var(--gold)' : `1px solid ${color.border}`,
-                        borderRadius: editingId === fixture.id ? '10px 10px 0 0' : 8,
-                        borderBottom: editingId === fixture.id ? 'none' : undefined,
-                        cursor: (fixture.played ? canEdit : canEnter) ? 'pointer' : 'default',
-                        transition: 'background 0.15s',
+                        padding: '10px 0',
+                        borderRadius: 12,
+                        border: `1px solid ${active ? 'rgba(255,215,0,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                        background: active ? 'rgba(255,215,0,0.12)' : 'rgba(0,0,0,0.12)',
+                        color: active ? 'var(--gold)' : 'var(--text-muted)',
+                        fontFamily: 'Bebas Neue',
+                        fontSize: 22,
+                        letterSpacing: 1.2,
+                        cursor: 'pointer',
                       }}
                     >
-                      <span style={{ fontFamily: 'Bebas Neue', fontSize: 13, letterSpacing: 1, color: color.label, minWidth: 72, opacity: 0.85 }}>
-                        {group.name}
-                        {fixtureConfig.group === 2 && (
-                          <span style={{ fontSize: 10, marginLeft: 4, opacity: 0.6 }}>L{fixture.leg}</span>
-                        )}
-                      </span>
-                      <span style={{ flex: 1, fontWeight: 600, fontSize: 14, textAlign: 'right' }}>{playerName(fixture.homeId)}</span>
-                      <div style={{
-                        padding: '5px 12px', minWidth: 64, textAlign: 'center',
-                        background: fixture.played ? '#1a2e00' : (fixture.played ? canEdit : canEnter) ? '#1a1400' : '#0a140a',
-                        border: `1px solid ${fixture.played ? '#3a6a00' : color.border}`, borderRadius: 6,
-                      }}>
-                        {fixture.played
-                          ? <span style={{ fontFamily: 'Bebas Neue', fontSize: 16, color: '#a0d060', letterSpacing: 2 }}>{fixture.homeScore} – {fixture.awayScore}</span>
-                          : <span style={{ fontFamily: 'Bebas Neue', fontSize: 13, color: canEnter ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: 1 }}>VS</span>
-                        }
-                      </div>
-                      <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{playerName(fixture.awayId)}</span>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: fixture.played ? '#4caf50' : '#3a3a3a' }} />
-                    </div>
-                    {editingId === fixture.id && (
-                      <div style={{ border: '1px solid var(--gold)', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
-                        <ScoreEntry fixture={fixture} playerName={playerName} onSave={(h, a) => handleSave(fixture.id, h, a)} onCancel={handleCancel} />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      {n}
+                    </button>
+                  )
+                })}
               </div>
+              <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 10 }}>
+                {fixtureConfig[stage.key] === 2 ? 'Two legs — home and away.' : 'Single leg — one match only.'}
+              </p>
             </div>
           ))}
         </div>
+
+        <div style={{
+          marginTop: 16,
+          borderRadius: 18,
+          padding: 16,
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div>
+              <p style={{ fontFamily: 'Bebas Neue', fontSize: 20, letterSpacing: 1.2, color: 'var(--gold)' }}>Fixture Preview</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Estimated match count per group based on current players and selected legs.</p>
+            </div>
+            {allPlayed && <span style={{ alignSelf: 'flex-start', background: 'rgba(76,175,80,0.12)', color: '#63db70', border: '1px solid rgba(76,175,80,0.24)', padding: '8px 12px', borderRadius: 999, fontWeight: 700, fontSize: 12 }}>✅ Group Stage Complete</span>}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+            {previewSummary.length > 0 ? previewSummary.map(g => (
+              <div key={g.name} style={{ borderRadius: 14, padding: 12, background: 'rgba(0,0,0,0.16)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <p style={{ fontFamily: 'Bebas Neue', fontSize: 18, color: 'var(--text-primary)', letterSpacing: 1.1 }}>{g.name}</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>{g.players} player{g.players !== 1 ? 's' : ''}</p>
+                <p style={{ color: 'var(--gold)', fontSize: 13, fontWeight: 700, marginTop: 6 }}>{g.matches} match{g.matches !== 1 ? 'es' : ''}</p>
+              </div>
+            )) : (
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No groups created yet.</div>
+            )}
+          </div>
+
+          {isAdmin && (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+              {!fixturesLocked && (
+                <>
+                  <button className="btn-gold" onClick={generateGroupFixtures}>
+                    {fixturesGenerated ? '🔄 Regenerate Fixtures' : '⚽ Generate Group Fixtures'}
+                  </button>
+                  {fixturesGenerated && <button className="btn-danger" onClick={resetFixtures}>🗑️ Reset All Fixtures</button>}
+                </>
+              )}
+              {fixturesGenerated && !fixturesLocked && <button className="btn-ghost" style={{ marginLeft: 'auto' }} onClick={handleLock}>🔒 Lock Fixtures</button>}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {fixturesGenerated ? (
+        <>
+          <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <SectionTitle eyebrow="Schedule Views" title="Browse Fixtures" sub="Switch between per-group cards and a unified round view." />
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[
+                { id: 'group', label: '📋 By Group' },
+                { id: 'round', label: '🔄 By Round' },
+              ].map(v => {
+                const active = view === v.id
+                return (
+                  <button
+                    key={v.id}
+                    onClick={() => { setView(v.id); setEditingId(null) }}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: 999,
+                      border: `1px solid ${active ? 'rgba(255,215,0,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                      background: active ? 'rgba(255,215,0,0.12)' : 'rgba(255,255,255,0.02)',
+                      color: active ? 'var(--gold)' : 'var(--text-muted)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {v.label}
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          {view === 'group' && (
+            <div style={{ display: 'grid', gap: 18 }}>
+              {fixturesByGroup.map(({ group, color, leg1, leg2, all }) => {
+                if (all.length === 0) return null
+                const played = all.filter(f => f.played).length
+                return (
+                  <section key={group.id} style={{
+                    borderRadius: 24,
+                    overflow: 'hidden',
+                    border: `1px solid ${color.border}55`,
+                    background: `linear-gradient(180deg, ${color.bg}, rgba(0,0,0,0.18))`,
+                    boxShadow: `0 16px 40px ${color.glow}`,
+                  }}>
+                    <div style={{
+                      padding: '16px 18px',
+                      borderBottom: `1px solid ${color.border}45`,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                    }}>
+                      <div>
+                        <p style={{ fontFamily: 'Bebas Neue', fontSize: 28, letterSpacing: 1.6, color: color.label }}>{group.name}</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{group.playerIds.length} competitor{group.playerIds.length !== 1 ? 's' : ''} in this group</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ padding: '8px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: 12, border: '1px solid rgba(255,255,255,0.08)' }}>{played}/{all.length} played</span>
+                        <span style={{ padding: '8px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.05)', color: color.label, fontSize: 12, border: `1px solid ${color.border}55` }}>{fixtureConfig.group === 2 ? '2 legs enabled' : '1 leg enabled'}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: 18, display: 'grid', gap: 16 }}>
+                      {fixtureConfig.group === 2 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+                          <div>
+                            <p style={{ color: color.label, fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10 }}>🏠 Leg 1</p>
+                            <div style={{ display: 'grid', gap: 10 }}>
+                              {leg1.map((fixture, idx) => (
+                                <FixtureCard
+                                  key={fixture.id}
+                                  fixture={fixture}
+                                  idx={idx}
+                                  groupName={group.name}
+                                  color={color}
+                                  playerName={playerName}
+                                  canEnter={canEnter}
+                                  canEdit={canEdit}
+                                  editingId={editingId}
+                                  onEdit={handleEdit}
+                                  onSave={handleSave}
+                                  onCancel={handleCancel}
+                                  legLabel="Leg 1"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p style={{ color: color.label, fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10 }}>✈️ Leg 2</p>
+                            <div style={{ display: 'grid', gap: 10 }}>
+                              {leg2.map((fixture, idx) => (
+                                <FixtureCard
+                                  key={fixture.id}
+                                  fixture={fixture}
+                                  idx={idx}
+                                  groupName={group.name}
+                                  color={color}
+                                  playerName={playerName}
+                                  canEnter={canEnter}
+                                  canEdit={canEdit}
+                                  editingId={editingId}
+                                  onEdit={handleEdit}
+                                  onSave={handleSave}
+                                  onCancel={handleCancel}
+                                  legLabel="Leg 2"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          {all.map((fixture, idx) => (
+                            <FixtureCard
+                              key={fixture.id}
+                              fixture={fixture}
+                              idx={idx}
+                              groupName={group.name}
+                              color={color}
+                              playerName={playerName}
+                              canEnter={canEnter}
+                              canEdit={canEdit}
+                              editingId={editingId}
+                              onEdit={handleEdit}
+                              onSave={handleSave}
+                              onCancel={handleCancel}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                )
+              })}
+            </div>
+          )}
+
+          {view === 'round' && (
+            <div style={{ display: 'grid', gap: 18 }}>
+              {rounds.map(({ roundNum, matches }) => (
+                <section key={roundNum} className="card" style={{ padding: 18 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+                    <div>
+                      <p style={{ fontFamily: 'Bebas Neue', fontSize: 28, letterSpacing: 1.5, color: 'var(--gold)' }}>ROUND {roundNum}</p>
+                      <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Across all active groups</p>
+                    </div>
+                    <span style={{ padding: '8px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-primary)', fontSize: 12 }}>
+                      {matches.filter(m => m.fixture.played).length}/{matches.length} played
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {matches.map(({ group, color, fixture }, idx) => (
+                      <FixtureCard
+                        key={fixture.id}
+                        fixture={fixture}
+                        idx={idx}
+                        groupName={group.name}
+                        color={color}
+                        playerName={playerName}
+                        canEnter={canEnter}
+                        canEdit={canEdit}
+                        editingId={editingId}
+                        onEdit={handleEdit}
+                        onSave={handleSave}
+                        onCancel={handleCancel}
+                        legLabel={fixtureConfig.group === 2 ? `Leg ${fixture.leg}` : ''}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <EmptyBlock
+          icon="📅"
+          title="No Fixtures Yet"
+          sub={isAdmin ? 'Use the setup panel above to generate the full group schedule.' : 'Fixtures have not been generated by an admin yet.'}
+        />
       )}
     </div>
   )
