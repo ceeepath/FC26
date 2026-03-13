@@ -8,6 +8,7 @@ import { load, save, KEYS } from './utils/storage'
 const DEFAULT_SETTINGS = {
   adminPassword: 'ea26admin',
   openResultEntry: false,
+  minPlayers: 1,
 }
 
 const TABS = [
@@ -185,6 +186,7 @@ export default function App() {
             players={players}
             setPlayers={setPlayers}
             isAdmin={isAdmin}
+            minPlayers={settings.minPlayers ?? 1}
           />
         )}
 
