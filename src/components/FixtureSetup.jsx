@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { generateId } from '../utils/storage'
+
 const STAGES = [
   { key: 'group',   label: 'Group Stage',   icon: '📋' },
   { key: 'quarter', label: 'Quarter Finals', icon: '⚔️' },
