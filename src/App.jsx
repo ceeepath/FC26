@@ -27,6 +27,7 @@ export default function App() {
   const [fixtures, setFixtures] = useState(() => load(KEYS.FIXTURES, []))
   const [fixtureConfig, setFixtureConfig] = useState(() => load(KEYS.FIXTURE_CONFIG, DEFAULT_FIXTURE_CONFIG))
   const [fixturesLocked, setFixturesLocked] = useState(() => load(KEYS.FIXTURES_LOCKED, false))
+  const [qualifierConfig, setQualifierConfig] = useState(() => load(KEYS.QUALIFIER_CONFIG, { perGroup: {}, bestLosers: 0 }))
   const [settings, setSettings] = useState(() => load(KEYS.SETTINGS, DEFAULT_SETTINGS))
   const [isAdmin, setIsAdmin] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
@@ -38,6 +39,7 @@ export default function App() {
   useEffect(() => { save(KEYS.FIXTURES, fixtures) }, [fixtures])
   useEffect(() => { save(KEYS.FIXTURE_CONFIG, fixtureConfig) }, [fixtureConfig])
   useEffect(() => { save(KEYS.FIXTURES_LOCKED, fixturesLocked) }, [fixturesLocked])
+  useEffect(() => { save(KEYS.QUALIFIER_CONFIG, qualifierConfig) }, [qualifierConfig])
   useEffect(() => { save(KEYS.SETTINGS, settings) }, [settings])
 
   const fixturesGenerated = fixtures.length > 0
@@ -182,7 +184,11 @@ export default function App() {
           />
         )}
         {activeTab === 'standings' && (
-          <GroupStandings players={players} groups={groups} fixtures={fixtures} />
+          <GroupStandings
+            players={players} groups={groups} fixtures={fixtures}
+            qualifierConfig={qualifierConfig} setQualifierConfig={setQualifierConfig}
+            isAdmin={isAdmin}
+          />
         )}
         {activeTab === 'settings' && isAdmin && (
           <Settings settings={settings} setSettings={setSettings} onLogout={handleLogout} />

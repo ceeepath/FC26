@@ -5,6 +5,7 @@ export const KEYS = {
   FIXTURES: 'ea26_fixtures',
   FIXTURE_CONFIG: 'ea26_fixture_config',
   FIXTURES_LOCKED: 'ea26_fixtures_locked',
+  QUALIFIER_CONFIG: 'ea26_qualifier_config',
   SETTINGS: 'ea26_settings',
 }
 
