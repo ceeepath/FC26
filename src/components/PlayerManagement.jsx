@@ -286,10 +286,20 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {filtered.map((player) => (
-            <div key={player.id} className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-              <span style={{ fontFamily: 'Bebas Neue', fontSize: 18, color: 'var(--gold)', minWidth: 32, textAlign: 'center', opacity: 0.7 }}>
+            <div key={player.id} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '10px 14px',
+              background: 'var(--green-card)',
+              border: '1px solid var(--green-border)',
+              borderRadius: 10,
+              transition: 'border-color 0.15s, background 0.15s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a5a2a'; e.currentTarget.style.background = '#0a1a0a' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--green-border)'; e.currentTarget.style.background = 'var(--green-card)' }}
+            >
+              <span style={{ fontFamily: 'Bebas Neue', fontSize: 16, color: 'var(--gold-dim)', minWidth: 28, textAlign: 'center', opacity: 0.8 }}>
                 {String(players.indexOf(player) + 1).padStart(2, '0')}
               </span>
 
@@ -300,23 +310,23 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
                   onChange={e => setEditName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') saveEdit(player.id); if (e.key === 'Escape') setEditingId(null) }}
                   autoFocus
-                  style={{ flex: 1, padding: '6px 10px', fontSize: 14 }}
+                  style={{ flex: 1, padding: '5px 10px', fontSize: 14 }}
                 />
               ) : (
-                <span style={{ flex: 1, fontWeight: 600, fontSize: 15 }}>{player.name}</span>
+                <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{player.name}</span>
               )}
 
               {isAdmin && (
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 6 }}>
                   {editingId === player.id ? (
                     <>
-                      <button className="btn-gold" style={{ padding: '6px 14px', fontSize: 13 }} onClick={() => saveEdit(player.id)}>Save</button>
-                      <button className="btn-ghost" style={{ padding: '6px 14px', fontSize: 13 }} onClick={() => setEditingId(null)}>Cancel</button>
+                      <button className="btn-gold" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => saveEdit(player.id)}>Save</button>
+                      <button className="btn-ghost" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => setEditingId(null)}>Cancel</button>
                     </>
                   ) : (
                     <>
-                      <button className="btn-ghost" style={{ padding: '6px 14px', fontSize: 13 }} onClick={() => startEdit(player)}>✏️ Edit</button>
-                      <button className="btn-danger" onClick={() => removePlayer(player.id, player.name)}>🗑️</button>
+                      <button className="btn-ghost" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => startEdit(player)}>✏️</button>
+                      <button className="btn-danger" style={{ padding: '5px 10px' }} onClick={() => removePlayer(player.id, player.name)}>🗑️</button>
                     </>
                   )}
                 </div>
