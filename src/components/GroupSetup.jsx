@@ -1,15 +1,200 @@
 import { useState } from 'react'
 
 const GROUP_COLORS = [
-  { border: '#c9960f', bg: '#1a1200', label: 'var(--gold)' },
-  { border: '#1a7a4a', bg: '#001a0e', label: '#4cdf8a' },
-  { border: '#1a4a9a', bg: '#00081a', label: '#6aaeff' },
-  { border: '#8a1a8a', bg: '#150015', label: '#e07ae0' },
-  { border: '#9a4a1a', bg: '#1a0800', label: '#f0a060' },
-  { border: '#1a7a7a', bg: '#001515', label: '#60e0e0' },
-  { border: '#6a1a1a', bg: '#180000', label: '#e06060' },
-  { border: '#4a6a1a', bg: '#0a1400', label: '#a0d060' },
+  { border: '#c9960f', bg: '#1a1200', label: 'var(--gold)', glow: 'rgba(201, 150, 15, 0.22)' },
+  { border: '#1a7a4a', bg: '#001a0e', label: '#4cdf8a', glow: 'rgba(76, 223, 138, 0.2)' },
+  { border: '#1a4a9a', bg: '#00081a', label: '#6aaeff', glow: 'rgba(106, 174, 255, 0.2)' },
+  { border: '#8a1a8a', bg: '#150015', label: '#e07ae0', glow: 'rgba(224, 122, 224, 0.18)' },
+  { border: '#9a4a1a', bg: '#1a0800', label: '#f0a060', glow: 'rgba(240, 160, 96, 0.18)' },
+  { border: '#1a7a7a', bg: '#001515', label: '#60e0e0', glow: 'rgba(96, 224, 224, 0.18)' },
+  { border: '#6a1a1a', bg: '#180000', label: '#e06060', glow: 'rgba(224, 96, 96, 0.18)' },
+  { border: '#4a6a1a', bg: '#0a1400', label: '#a0d060', glow: 'rgba(160, 208, 96, 0.18)' },
 ]
+
+function panelStyle(extra = {}) {
+  return {
+    background: 'linear-gradient(180deg, rgba(8,18,8,0.98), rgba(5,11,5,0.98))',
+    border: '1px solid var(--green-border)',
+    borderRadius: 18,
+    boxShadow: 'var(--shadow-card)',
+    ...extra,
+  }
+}
+
+function SectionHeader({ title, meta, action }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      padding: '16px 18px',
+      borderBottom: '1px solid #102010',
+      flexWrap: 'wrap',
+    }}>
+      <div>
+        <div style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 2, color: 'var(--gold)' }}>{title}</div>
+        {meta ? <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>{meta}</div> : null}
+      </div>
+      {action || null}
+    </div>
+  )
+}
+
+function MetricPill({ label, value, accent = 'var(--gold)' }) {
+  return (
+    <div style={{
+      minWidth: 126,
+      padding: '12px 14px',
+      borderRadius: 16,
+      border: `1px solid ${accent}30`,
+      background: `linear-gradient(180deg, ${accent}14, rgba(0,0,0,0))`,
+    }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1.2, fontWeight: 700 }}>{label}</div>
+      <div style={{ fontFamily: 'Bebas Neue', fontSize: 28, color: 'var(--text-primary)', marginTop: 8 }}>{value}</div>
+    </div>
+  )
+}
+
+function PlayerChip({ checked, name, onToggle, disabled = false }) {
+  return (
+    <label style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '10px 12px',
+      background: checked ? 'linear-gradient(180deg, #102810, #0a180a)' : '#050e05',
+      border: `1px solid ${checked ? '#2f7a2f' : 'var(--green-border)'}`,
+      borderRadius: 12,
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      transition: 'background 0.15s, border-color 0.15s, transform 0.15s',
+      userSelect: 'none',
+      opacity: disabled ? 0.55 : 1,
+    }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        disabled={disabled}
+        style={{ width: 15, height: 15, accentColor: 'var(--gold)', cursor: disabled ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+      />
+      <span style={{
+        fontSize: 14,
+        fontWeight: 600,
+        color: 'var(--text-primary)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}>
+        {name}
+      </span>
+    </label>
+  )
+}
+
+function GroupCard({ group, players, groupsLocked, isAdmin, onRemoveGroup, onRemovePlayer }) {
+  const color = GROUP_COLORS[group.colorIdx % GROUP_COLORS.length]
+  const groupPlayers = group.playerIds.map(id => players.find(p => p.id === id)).filter(Boolean)
+
+  return (
+    <div style={{
+      position: 'relative',
+      overflow: 'hidden',
+      borderRadius: 18,
+      background: `linear-gradient(180deg, ${color.bg}, rgba(4,8,4,0.98))`,
+      border: `1px solid ${color.border}`,
+      boxShadow: `0 18px 40px -26px ${color.glow}`,
+    }}>
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: `radial-gradient(circle at top right, ${color.glow} 0%, transparent 36%)`,
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{
+        position: 'relative',
+        padding: '14px 16px',
+        borderBottom: `1px solid ${color.border}55`,
+        background: `linear-gradient(90deg, ${color.glow}, transparent)`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: 22, letterSpacing: 2, color: color.label }}>{group.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+              {groupPlayers.length} player{groupPlayers.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: color.label, boxShadow: `0 0 16px ${color.glow}` }} />
+            {isAdmin && !groupsLocked ? (
+              <button className="btn-danger" style={{ padding: '5px 9px', fontSize: 12 }} onClick={() => onRemoveGroup(group.id)}>
+                🗑
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ position: 'relative', padding: '12px 16px 14px' }}>
+        {groupPlayers.length === 0 ? (
+          <div style={{
+            border: `1px dashed ${color.border}66`,
+            borderRadius: 12,
+            padding: '18px 12px',
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            fontSize: 13,
+          }}>
+            No players assigned yet
+          </div>
+        ) : groupPlayers.map((player, idx) => (
+          <div key={player.id} style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '10px 0',
+            borderBottom: idx === groupPlayers.length - 1 ? 'none' : `1px solid ${color.border}28`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 12,
+                fontWeight: 700,
+                color: color.label,
+                border: `1px solid ${color.border}`,
+                background: `${color.glow}`,
+                flexShrink: 0,
+              }}>
+                {idx + 1}
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {player.name}
+              </span>
+            </div>
+            {isAdmin && !groupsLocked ? (
+              <button
+                onClick={() => onRemovePlayer(group.id, player.id)}
+                title="Unassign player"
+                style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  border: `1px solid ${color.border}66`,
+                  background: '#081108', color: 'var(--text-muted)',
+                  cursor: 'pointer', flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function GroupSetup({ players, groups, setGroups, groupsLocked, setGroupsLocked, isAdmin }) {
   const [newGroupName, setNewGroupName] = useState('')
@@ -26,12 +211,16 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
   const assignedPlayerIds = new Set(groups.flatMap(g => g.playerIds))
   const unassignedPlayers = players.filter(p => !assignedPlayerIds.has(p.id))
   const allAssigned = unassignedPlayers.length === 0 && players.length > 0
+  const expectedGroups = !isNaN(parseInt(playersPerGroup, 10)) && parseInt(playersPerGroup, 10) >= 2
+    ? Math.ceil(players.length / parseInt(playersPerGroup, 10))
+    : 0
 
   function addGroup(e) {
     e.preventDefault()
     const name = newGroupName.trim() || `Group ${String.fromCharCode(65 + groups.length)}`
     if (groups.some(g => g.name.toLowerCase() === name.toLowerCase())) {
-      flash('⚠️ A group with that name already exists.', false); return
+      flash('⚠️ A group with that name already exists.', false)
+      return
     }
     setGroups(prev => [...prev, { id: `grp_${Date.now()}`, name, playerIds: [], colorIdx: prev.length }])
     setNewGroupName('')
@@ -39,12 +228,21 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
   }
 
   function handleAutoAssign() {
-    if (players.length === 0) { flash('⚠️ No players to assign.', false); return }
+    if (players.length === 0) {
+      flash('⚠️ No players to assign.', false)
+      return
+    }
+
     const ppg = parseInt(playersPerGroup, 10)
-    if (isNaN(ppg) || ppg < 2) { flash('⚠️ Players per group must be at least 2.', false); return }
+    if (isNaN(ppg) || ppg < 2) {
+      flash('⚠️ Players per group must be at least 2.', false)
+      return
+    }
+
     const shuffled = [...players].sort(() => Math.random() - 0.5)
     const numGroups = Math.ceil(shuffled.length / ppg)
     const newGroups = []
+
     for (let i = 0; i < numGroups; i++) {
       const letter = String.fromCharCode(65 + i)
       const slice = shuffled.slice(i * ppg, i * ppg + ppg)
@@ -55,7 +253,9 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
         colorIdx: i,
       })
     }
+
     if (!window.confirm(`This will clear all existing groups and randomly create ${numGroups} group${numGroups !== 1 ? 's' : ''} of ~${ppg} players. Continue?`)) return
+
     setGroups(newGroups)
     setCheckedPlayers(new Set())
     setTargetGroup('')
@@ -79,13 +279,21 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
   }
 
   function bulkAssign() {
-    if (checkedPlayers.size === 0) { flash('⚠️ No players selected.', false); return }
-    if (!targetGroup) { flash('⚠️ Please select a target group.', false); return }
-    setGroups(prev => prev.map(g =>
+    if (checkedPlayers.size === 0) {
+      flash('⚠️ No players selected.', false)
+      return
+    }
+    if (!targetGroup) {
+      flash('⚠️ Please select a target group.', false)
+      return
+    }
+
+    setGroups(prev => prev.map(g => (
       g.id === targetGroup
         ? { ...g, playerIds: [...g.playerIds, ...Array.from(checkedPlayers)] }
         : g
-    ))
+    )))
+
     const groupName = groups.find(g => g.id === targetGroup)?.name
     flash(`✅ ${checkedPlayers.size} player${checkedPlayers.size !== 1 ? 's' : ''} assigned to ${groupName}!`)
     setCheckedPlayers(new Set())
@@ -93,20 +301,27 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
   }
 
   function removePlayerFromGroup(groupId, playerId) {
-    setGroups(prev => prev.map(g =>
+    setGroups(prev => prev.map(g => (
       g.id === groupId ? { ...g, playerIds: g.playerIds.filter(id => id !== playerId) } : g
-    ))
+    )))
   }
 
   function removeGroup(groupId) {
     const group = groups.find(g => g.id === groupId)
+    if (!group) return
     if (!window.confirm(`Remove "${group.name}" and unassign all its players?`)) return
     setGroups(prev => prev.filter(g => g.id !== groupId))
   }
 
   function handleLock() {
-    if (unassignedPlayers.length > 0) { flash(`⚠️ ${unassignedPlayers.length} player(s) still unassigned.`, false); return }
-    if (groups.length === 0) { flash('⚠️ No groups created yet.', false); return }
+    if (unassignedPlayers.length > 0) {
+      flash(`⚠️ ${unassignedPlayers.length} player(s) still unassigned.`, false)
+      return
+    }
+    if (groups.length === 0) {
+      flash('⚠️ No groups created yet.', false)
+      return
+    }
     if (!window.confirm('Lock groups? This cannot be undone once the tournament starts.')) return
     setGroupsLocked(true)
     flash('🔒 Groups locked! Ready to generate fixtures.')
@@ -121,272 +336,255 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
     background: '#050e05',
     border: '1px solid var(--green-border)',
     color: 'var(--text-primary)',
-    borderRadius: 8,
-    padding: '10px 14px',
+    borderRadius: 12,
+    padding: '11px 14px',
     fontFamily: 'Barlow',
+    fontSize: 14,
+    outline: 'none',
+  }
+
+  const inputStyle = {
+    width: '100%',
+    background: '#050e05',
+    border: '1px solid var(--green-border)',
+    color: 'var(--text-primary)',
+    borderRadius: 12,
+    padding: '11px 14px',
     fontSize: 14,
     outline: 'none',
   }
 
   return (
     <div className="fade-up">
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, color: 'var(--gold)', letterSpacing: 2 }}>
-          GROUP SETUP
-        </h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-          {players.length} players · {groups.length} group{groups.length !== 1 ? 's' : ''} · {unassignedPlayers.length} unassigned
-        </p>
+      <div style={{ ...panelStyle({ padding: 22, marginBottom: 18, overflow: 'hidden', position: 'relative' }) }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(circle at top right, rgba(201,150,15,0.12) 0%, transparent 34%)',
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+          <div style={{ maxWidth: 560 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 999, border: '1px solid #2a3a12', background: 'rgba(201,150,15,0.08)', marginBottom: 14 }}>
+              <span style={{ fontSize: 12 }}>📋</span>
+              <span style={{ fontSize: 11, letterSpacing: 1.3, fontWeight: 700, color: 'var(--gold)' }}>GROUP STAGE SETUP</span>
+            </div>
+            <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 34, color: 'var(--text-primary)', letterSpacing: 2, marginBottom: 8 }}>
+              Build the tournament groups
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.65, maxWidth: 520 }}>
+              Create groups manually or auto-assign players randomly, then review every group card before locking the stage and moving on to fixtures.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignSelf: 'flex-start' }}>
+            <MetricPill label="PLAYERS" value={players.length} />
+            <MetricPill label="GROUPS" value={groups.length} accent="#4cdf8a" />
+            <MetricPill label="UNASSIGNED" value={unassignedPlayers.length} accent={unassignedPlayers.length === 0 ? '#4cdf8a' : '#f0a060'} />
+          </div>
+        </div>
       </div>
 
-      {groupsLocked && (
+      {feedback.msg ? (
         <div style={{
-          background: '#0a1f0a', border: '1px solid #2a5a2a', borderLeft: '3px solid #4caf50',
-          borderRadius: 10, padding: '12px 18px', marginBottom: 20,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 18 }}>🔒</span>
-            <div>
-              <p style={{ fontWeight: 700, color: '#4caf50', fontSize: 14 }}>Groups are locked</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Fixtures can now be generated.</p>
-            </div>
-          </div>
-          {isAdmin && (
-            <button className="btn-ghost" style={{ fontSize: 12, padding: '6px 12px' }} onClick={handleUnlock}>
-              Unlock
-            </button>
-          )}
-        </div>
-      )}
-
-      {feedback.msg && (
-        <div style={{
-          background: feedback.ok ? '#0e2a0e' : '#2a0e0e',
-          border: `1px solid ${feedback.ok ? 'var(--green-border)' : '#5a2020'}`,
-          borderRadius: 8, padding: '10px 16px', marginBottom: 16,
-          fontSize: 14, color: feedback.ok ? '#a8d5a8' : '#e08080'
+          ...panelStyle({
+            padding: '12px 16px',
+            marginBottom: 16,
+            borderColor: feedback.ok ? '#2d5a2d' : '#5a2020',
+            background: feedback.ok
+              ? 'linear-gradient(180deg, rgba(10,31,10,0.98), rgba(6,14,6,0.98))'
+              : 'linear-gradient(180deg, rgba(40,14,14,0.98), rgba(18,8,8,0.98))',
+          }),
+          color: feedback.ok ? '#a8d5a8' : '#f0a0a0',
+          fontSize: 14,
         }}>
           {feedback.msg}
         </div>
-      )}
+      ) : null}
 
-      {!groupsLocked && isAdmin && (
-        <>
-          {/* Auto-Assign */}
-          <div className="card" style={{ padding: 20, marginBottom: 16 }}>
-            <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--gold)', marginBottom: 4 }}>
-              🎲 AUTO-ASSIGN PLAYERS TO GROUPS
-            </p>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
-              Set how many players per group. The app will randomly shuffle all {players.length} players and create the groups automatically.
-            </p>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <label style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>Players per group:</label>
-                <input
-                  type="number"
-                  min="2"
-                  max="20"
-                  value={playersPerGroup}
-                  onChange={e => setPlayersPerGroup(e.target.value)}
-                  style={{ width: 70 }}
-                />
+      {groupsLocked ? (
+        <div style={{
+          ...panelStyle({
+            marginBottom: 18,
+            padding: '16px 18px',
+            borderColor: '#2d5a2d',
+            background: 'linear-gradient(180deg, rgba(10,31,10,0.98), rgba(6,14,6,0.98))',
+          }),
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, border: '1px solid #2d5a2d', background: 'rgba(76,175,80,0.12)', display: 'grid', placeItems: 'center', fontSize: 18 }}>
+              🔒
+            </div>
+            <div>
+              <div style={{ color: '#7ed27e', fontWeight: 700, fontSize: 14 }}>Groups are locked and ready</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 3 }}>The next step is fixture generation.</div>
+            </div>
+          </div>
+          {isAdmin ? <button className="btn-ghost" onClick={handleUnlock}>Unlock Groups</button> : null}
+        </div>
+      ) : null}
+
+      {!groupsLocked && isAdmin ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 16, marginBottom: 18 }}>
+          <div style={panelStyle()}>
+            <SectionHeader title="AUTO ASSIGN" meta="Shuffle every player and create balanced groups instantly" />
+            <div style={{ padding: 18 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 14 }}>
+                <MetricPill label="TOTAL PLAYERS" value={players.length} accent="#6aaeff" />
+                <MetricPill label="PLAYERS / GROUP" value={playersPerGroup} accent="#f0a060" />
+                <MetricPill label="EST. GROUPS" value={expectedGroups || 0} accent="#4cdf8a" />
               </div>
-              {players.length > 0 && !isNaN(parseInt(playersPerGroup)) && parseInt(playersPerGroup) >= 2 && (
-                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                  → {Math.ceil(players.length / parseInt(playersPerGroup))} group{Math.ceil(players.length / parseInt(playersPerGroup)) !== 1 ? 's' : ''}
-                </span>
-              )}
-              <button className="btn-gold" style={{ whiteSpace: 'nowrap' }} onClick={handleAutoAssign}>
-                🎲 Auto-Assign
-              </button>
+
+              <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 180, flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 700, letterSpacing: 1 }}>PLAYERS PER GROUP</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="20"
+                    value={playersPerGroup}
+                    onChange={e => setPlayersPerGroup(e.target.value)}
+                    style={{ ...inputStyle, width: 110 }}
+                  />
+                </div>
+                <button className="btn-gold" onClick={handleAutoAssign} style={{ whiteSpace: 'nowrap' }}>
+                  🎲 Auto-Assign Players
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Create Group Manually */}
-          <div className="card" style={{ padding: 20, marginBottom: 16 }}>
-            <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: 'var(--gold)' }}>
-              ➕ CREATE A GROUP MANUALLY
-            </p>
-            <form onSubmit={addGroup} style={{ display: 'flex', gap: 10 }}>
+          <div style={panelStyle()}>
+            <SectionHeader title="CREATE GROUP" meta="Add a group manually before assigning players" />
+            <form onSubmit={addGroup} style={{ padding: 18 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 700, letterSpacing: 1 }}>GROUP NAME</label>
               <input
                 type="text"
                 placeholder={`Group ${String.fromCharCode(65 + groups.length)} (leave blank for auto-name)`}
                 value={newGroupName}
                 onChange={e => setNewGroupName(e.target.value)}
-                style={{ flex: 1 }}
+                style={{ ...inputStyle, marginBottom: 14 }}
               />
-              <button type="submit" className="btn-gold" style={{ whiteSpace: 'nowrap' }}>
-                + GROUP
+              <button type="submit" className="btn-gold" style={{ width: '100%' }}>
+                + Create Group
               </button>
             </form>
           </div>
+        </div>
+      ) : null}
 
-          {/* Bulk Assign with Checkboxes */}
-          {groups.length > 0 && unassignedPlayers.length > 0 && (
-            <div className="card" style={{ padding: 20, marginBottom: 24 }}>
-              <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--gold)', marginBottom: 4 }}>
-                ✅ ASSIGN PLAYERS TO GROUP
-              </p>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
-                Check one or more players, pick a group, then click Assign.
-              </p>
+      {!groupsLocked && isAdmin && groups.length > 0 ? (
+        <div style={{ ...panelStyle(), marginBottom: 18 }}>
+          <SectionHeader
+            title="ASSIGN PLAYERS"
+            meta="Select unassigned players and drop them into any group"
+            action={(
+              <button className="btn-ghost" onClick={toggleCheckAll} style={{ padding: '8px 12px', fontSize: 12 }}>
+                {checkedPlayers.size === unassignedPlayers.length && unassignedPlayers.length > 0 ? 'Clear All' : 'Select All'}
+              </button>
+            )}
+          />
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                  <input
-                    type="checkbox"
-                    checked={checkedPlayers.size === unassignedPlayers.length && unassignedPlayers.length > 0}
-                    onChange={toggleCheckAll}
-                    style={{ width: 16, height: 16, accentColor: 'var(--gold)', cursor: 'pointer' }}
-                  />
-                  Select all ({unassignedPlayers.length})
-                </label>
+          <div style={{ padding: 18 }}>
+            {unassignedPlayers.length > 0 ? (
+              <>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap', marginBottom: 16 }}>
+                  <div style={{ minWidth: 220, flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 700, letterSpacing: 1 }}>TARGET GROUP</label>
+                    <select value={targetGroup} onChange={e => setTargetGroup(e.target.value)} style={{ ...selectStyle, width: '100%' }}>
+                      <option value="">Choose a group</option>
+                      {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
+                  <button className="btn-gold" onClick={bulkAssign} style={{ opacity: checkedPlayers.size === 0 || !targetGroup ? 0.5 : 1 }}>
+                    Assign Selected {checkedPlayers.size > 0 ? `(${checkedPlayers.size})` : ''}
+                  </button>
+                </div>
 
-                <select
-                  value={targetGroup}
-                  onChange={e => setTargetGroup(e.target.value)}
-                  style={{ ...selectStyle, flex: 1, minWidth: 160 }}
-                >
-                  <option value="">Select target group…</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.id}>{g.name} ({g.playerIds.filter(id => players.some(p => p.id === id)).length} players)</option>
-                  ))}
-                </select>
-
-                <button
-                  className="btn-gold"
-                  style={{ whiteSpace: 'nowrap', opacity: checkedPlayers.size === 0 || !targetGroup ? 0.45 : 1 }}
-                  onClick={bulkAssign}
-                >
-                  Assign {checkedPlayers.size > 0 ? `(${checkedPlayers.size})` : ''} →
-                </button>
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                gap: 6,
-                maxHeight: 260,
-                overflowY: 'auto',
-                padding: '2px 0',
-              }}>
-                {unassignedPlayers.map(p => (
-                  <label key={p.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '8px 12px',
-                    background: checkedPlayers.has(p.id) ? '#0f2a0f' : '#050e05',
-                    border: `1px solid ${checkedPlayers.has(p.id) ? '#2a6a2a' : 'var(--green-border)'}`,
-                    borderRadius: 8, cursor: 'pointer',
-                    transition: 'background 0.15s, border-color 0.15s',
-                    userSelect: 'none',
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={checkedPlayers.has(p.id)}
-                      onChange={() => toggleCheck(p.id)}
-                      style={{ width: 15, height: 15, accentColor: 'var(--gold)', cursor: 'pointer', flexShrink: 0 }}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+                  gap: 8,
+                  maxHeight: 320,
+                  overflowY: 'auto',
+                  paddingRight: 4,
+                }}>
+                  {unassignedPlayers.map(player => (
+                    <PlayerChip
+                      key={player.id}
+                      checked={checkedPlayers.has(player.id)}
+                      name={player.name}
+                      onToggle={() => toggleCheck(player.id)}
                     />
-                    <span style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {p.name}
-                    </span>
-                  </label>
-                ))}
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{
+                borderRadius: 14,
+                border: '1px solid #2d5a2d',
+                background: 'linear-gradient(180deg, rgba(10,31,10,0.98), rgba(6,14,6,0.98))',
+                padding: '18px 16px',
+                color: '#7ed27e',
+                fontWeight: 700,
+                fontSize: 14,
+              }}>
+                ✅ All players have been assigned to groups.
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+      ) : null}
 
-          {groups.length > 0 && unassignedPlayers.length === 0 && (
-            <div style={{
-              background: '#0a1f0a', border: '1px solid #2a5a2a',
-              borderRadius: 10, padding: '12px 18px', marginBottom: 24,
-              display: 'flex', alignItems: 'center', gap: 10
-            }}>
-              <span style={{ fontSize: 18 }}>✅</span>
-              <p style={{ fontWeight: 600, color: '#4caf50', fontSize: 14 }}>All players have been assigned to groups!</p>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Groups Grid */}
       {groups.length === 0 ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-          <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>No groups yet. Use auto-assign or create one manually above.</p>
+        <div style={{ ...panelStyle({ padding: 42, textAlign: 'center' }) }}>
+          <div style={{ fontSize: 42, marginBottom: 12 }}>📋</div>
+          <div style={{ fontFamily: 'Bebas Neue', fontSize: 24, letterSpacing: 2, color: 'var(--gold)', marginBottom: 6 }}>No groups yet</div>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 420, margin: '0 auto' }}>
+            Start by auto-assigning players or create your first group manually.
+          </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16, marginBottom: 24 }}>
-          {groups.map(group => {
-            const color = GROUP_COLORS[group.colorIdx % GROUP_COLORS.length]
-            const groupPlayers = group.playerIds.map(id => players.find(p => p.id === id)).filter(Boolean)
-            return (
-              <div key={group.id} style={{ background: color.bg, border: `1px solid ${color.border}`, borderRadius: 12, overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px', borderBottom: `1px solid ${color.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontFamily: 'Bebas Neue', fontSize: 20, letterSpacing: 2, color: color.label }}>
-                    {group.name}
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{groupPlayers.length} player{groupPlayers.length !== 1 ? 's' : ''}</span>
-                    {isAdmin && !groupsLocked && (
-                      <button className="btn-danger" style={{ padding: '3px 8px', fontSize: 12 }} onClick={() => removeGroup(group.id)}>🗑️</button>
-                    )}
-                  </div>
-                </div>
-                <div style={{ padding: '10px 16px' }}>
-                  {groupPlayers.length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic', padding: '6px 0' }}>No players yet</p>
-                  ) : (
-                    groupPlayers.map((player, idx) => (
-                      <div key={player.id} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '7px 0', borderBottom: idx < groupPlayers.length - 1 ? `1px solid ${color.border}40` : 'none'
-                      }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ color: color.label, fontFamily: 'Bebas Neue', fontSize: 14, opacity: 0.7 }}>
-                            {String(idx + 1).padStart(2, '0')}
-                          </span>
-                          <span style={{ fontSize: 14, fontWeight: 600 }}>{player.name}</span>
-                        </span>
-                        {isAdmin && !groupsLocked && (
-                          <button
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: '2px 4px', lineHeight: 1 }}
-                            onClick={() => removePlayerFromGroup(group.id, player.id)}
-                            title="Unassign player"
-                          >✕</button>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )
-          })}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(255px, 1fr))', gap: 16, marginBottom: 18 }}>
+          {groups.map(group => (
+            <GroupCard
+              key={group.id}
+              group={group}
+              players={players}
+              groupsLocked={groupsLocked}
+              isAdmin={isAdmin}
+              onRemoveGroup={removeGroup}
+              onRemovePlayer={removePlayerFromGroup}
+            />
+          ))}
         </div>
       )}
 
-      {/* Lock button */}
-      {isAdmin && !groupsLocked && groups.length > 0 && (
+      {!groupsLocked && isAdmin && groups.length > 0 ? (
         <div style={{
-          background: allAssigned ? '#0a1f0a' : '#1a1000',
-          border: `1px solid ${allAssigned ? '#2a5a2a' : '#3a2a00'}`,
-          borderRadius: 10, padding: '16px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap'
+          ...panelStyle({
+            padding: '16px 18px',
+            borderColor: allAssigned ? '#2d5a2d' : '#5a4a20',
+            background: allAssigned
+              ? 'linear-gradient(180deg, rgba(10,31,10,0.98), rgba(6,14,6,0.98))'
+              : 'linear-gradient(180deg, rgba(32,24,8,0.98), rgba(18,12,4,0.98))',
+          }),
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
         }}>
           <div>
-            <p style={{ fontWeight: 700, fontSize: 14, color: allAssigned ? '#4caf50' : '#e07a30' }}>
-              {allAssigned ? '✅ All players assigned — ready to lock!' : `⚠️ ${unassignedPlayers.length} player(s) unassigned`}
-            </p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-              Locking groups enables fixture generation in the next step.
-            </p>
+            <div style={{ color: allAssigned ? '#7ed27e' : '#f0b060', fontWeight: 700, fontSize: 14 }}>
+              {allAssigned ? '✅ All players assigned — groups can now be locked.' : `⚠️ ${unassignedPlayers.length} player(s) still need a group.`}
+            </div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
+              Locking groups enables fixture generation in the next stage.
+            </div>
           </div>
-          <button className="btn-gold" style={{ opacity: allAssigned ? 1 : 0.5 }} onClick={handleLock}>
-            🔒 LOCK GROUPS
+          <button className="btn-gold" onClick={handleLock} style={{ opacity: allAssigned ? 1 : 0.5 }}>
+            🔒 Lock Groups
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
