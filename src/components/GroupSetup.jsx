@@ -251,7 +251,7 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
                 >
                   <option value="">Select target group…</option>
                   {groups.map(g => (
-                    <option key={g.id} value={g.id}>{g.name} ({g.playerIds.length} players)</option>
+                    <option key={g.id} value={g.id}>{g.name} ({g.playerIds.filter(id => players.some(p => p.id === id)).length} players)</option>
                   ))}
                 </select>
 

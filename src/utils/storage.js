@@ -2,6 +2,8 @@ export const KEYS = {
   PLAYERS: 'ea26_players',
   GROUPS: 'ea26_groups',
   GROUPS_LOCKED: 'ea26_groups_locked',
+  FIXTURES: 'ea26_fixtures',
+  FIXTURE_CONFIG: 'ea26_fixture_config',
   SETTINGS: 'ea26_settings',
 }
 
