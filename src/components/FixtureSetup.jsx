@@ -37,8 +37,8 @@ export default function FixtureSetup({
 
     groups.forEach(group => {
       // Filter to only valid player IDs, then shuffle for random fixture order
-      const validIds = group.playerIds.filter(id => players.some(p => p.id === id)).sort(() => Math.random() - 0.5)
-      const pairs = roundRobin(validIds)
+      const validIds = group.playerIds.filter(id => players.some(p => p.id === id))
+      const pairs = roundRobin(validIds).sort(() => Math.random() - 0.5)
       const legs = fixtureConfig.group === 2 ? 2 : 1
 
       pairs.forEach((pair, pairIdx) => {
