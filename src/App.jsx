@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import PlayerManagement from './components/PlayerManagement'
 import GroupSetup from './components/GroupSetup'
 import FixtureSetup from './components/FixtureSetup'
+import GroupStandings from './components/GroupStandings'
 import Settings from './components/Settings'
 import AdminLogin from './components/AdminLogin'
 import { load, save, KEYS } from './utils/storage'
@@ -40,10 +41,11 @@ export default function App() {
   useEffect(() => { save(KEYS.SETTINGS, settings) }, [settings])
 
   const TABS = [
-    { id: 'players',  label: '⚽ Players' },
-    { id: 'groups',   label: '📋 Groups' },
-    { id: 'fixtures', label: '📅 Fixtures', locked: !groupsLocked },
-    { id: 'settings', label: '⚙️ Settings', adminOnly: true },
+    { id: 'players',   label: '⚽ Players' },
+    { id: 'groups',    label: '📋 Groups' },
+    { id: 'fixtures',  label: '📅 Fixtures',  locked: !groupsLocked },
+    { id: 'standings', label: '📊 Standings', locked: !fixturesGenerated },
+    { id: 'settings',  label: '⚙️ Settings',  adminOnly: true },
   ]
 
   function handleTabClick(tab) {
@@ -177,6 +179,9 @@ export default function App() {
             openResultEntry={settings.openResultEntry}
             isAdmin={isAdmin}
           />
+        )}
+        {activeTab === 'standings' && (
+          <GroupStandings players={players} groups={groups} fixtures={fixtures} />
         )}
         {activeTab === 'settings' && isAdmin && (
           <Settings settings={settings} setSettings={setSettings} onLogout={handleLogout} />
