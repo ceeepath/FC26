@@ -174,6 +174,7 @@ export default function App() {
             fixtures={fixtures} setFixtures={setFixtures}
             fixtureConfig={fixtureConfig} setFixtureConfig={setFixtureConfig}
             fixturesLocked={fixturesLocked} setFixturesLocked={setFixturesLocked}
+            openResultEntry={settings.openResultEntry}
             isAdmin={isAdmin}
           />
         )}
