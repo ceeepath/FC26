@@ -1,23 +1,34 @@
-function StatCard({ icon, label, value, sub, color }) {
+import Avatar from './Avatar'
+
+const STAT_CARDS = [
+  { key: 'players', icon: '👥', label: 'PLAYERS REGISTERED', color: '#1a4a8a', glow: '#1a4a8a', text: '#6aaeff' },
+  { key: 'groups',  icon: '📋', label: 'GROUPS',             color: '#1a5a2a', glow: '#1a5a2a', text: '#6adf8a' },
+  { key: 'matches', icon: '⚽', label: 'MATCHES PLAYED',     color: '#7a3a08', glow: '#7a3a08', text: '#f0a060' },
+  { key: 'stage',   icon: '🏆', label: 'CURRENT STAGE',      color: '#5a4a00', glow: '#5a4a00', text: '#F5C518' },
+]
+
+function StatCard({ icon, label, value, sub, color, glow, text }) {
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #0a1a0a, #060e06)',
-      border: `1px solid ${color ?? '#1a3a1a'}`,
-      borderRadius: 14, padding: '20px 20px',
+      background: `linear-gradient(135deg, ${color}cc 0%, ${color}44 50%, rgba(6,14,6,0.95) 100%)`,
+      border: `1px solid ${color}`,
+      borderRadius: 14, padding: '18px 20px',
       position: 'relative', overflow: 'hidden',
+      boxShadow: `0 4px 24px ${glow}40, 0 1px 0 rgba(255,255,255,0.03) inset`,
     }}>
-      {/* Glow bg */}
+      {/* Corner glow */}
       <div style={{
-        position: 'absolute', top: -20, right: -20,
-        width: 80, height: 80, borderRadius: '50%',
-        background: `radial-gradient(circle, ${color ?? '#1a3a1a'}30 0%, transparent 70%)`,
+        position: 'absolute', top: -30, right: -30,
+        width: 100, height: 100, borderRadius: '50%',
+        background: `radial-gradient(circle, ${glow}50 0%, transparent 70%)`,
+        pointerEvents: 'none',
       }} />
-      <div style={{ fontSize: 24, marginBottom: 10 }}>{icon}</div>
-      <div style={{ fontFamily: 'Bebas Neue', fontSize: 38, color: color ?? 'var(--text-primary)', lineHeight: 1, marginBottom: 4 }}>
+      <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
+      <div style={{ fontFamily: 'Bebas Neue', fontSize: 40, color: text, lineHeight: 1, marginBottom: 2 }}>
         {value}
       </div>
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: 1 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: color ?? 'var(--text-muted)', marginTop: 4, opacity: 0.7 }}>{sub}</div>}
+      <div style={{ fontSize: 11, color: `${text}aa`, fontWeight: 700, letterSpacing: 1.5 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: `${text}77`, marginTop: 5 }}>{sub}</div>}
     </div>
   )
 }
@@ -30,7 +41,8 @@ function calcLeaderboard(players, fixtures) {
       const isHome=f.homeId===player.id, isAway=f.awayId===player.id
       if (!isHome&&!isAway) return
       MP++
-      const mg=isHome?(f.homeScore??0):(f.awayScore??0), tg=isHome?(f.awayScore??0):(f.homeScore??0)
+      const mg=isHome?(f.homeScore??0):(f.awayScore??0)
+      const tg=isHome?(f.awayScore??0):(f.homeScore??0)
       GF+=mg
       if (f.manualWinnerId) { if(f.manualWinnerId===player.id){W++;Pts+=3} else L++ }
       else { if(mg>tg){W++;Pts+=3} else if(mg===tg){D++;Pts+=1} else L++ }
@@ -40,215 +52,216 @@ function calcLeaderboard(players, fixtures) {
 }
 
 export default function Dashboard({ players, groups, fixtures, knockoutBracket, qualifierConfig }) {
-  const totalGroupFixtures  = fixtures.filter(f => f.type === 'group').length
-  const playedGroupFixtures = fixtures.filter(f => f.type === 'group' && f.played).length
-  const totalKOFixtures     = fixtures.filter(f => f.type === 'knockout' && !f.isBye).length
-  const playedKOFixtures    = fixtures.filter(f => f.type === 'knockout' && !f.isBye && f.played).length
-  const totalFixtures  = totalGroupFixtures + totalKOFixtures
-  const playedFixtures = playedGroupFixtures + playedKOFixtures
+  const totalGroupFix  = fixtures.filter(f => f.type === 'group').length
+  const playedGroupFix = fixtures.filter(f => f.type === 'group' && f.played).length
+  const totalKOFix     = fixtures.filter(f => f.type === 'knockout' && !f.isBye).length
+  const playedKOFix    = fixtures.filter(f => f.type === 'knockout' && !f.isBye && f.played).length
+  const totalFix  = totalGroupFix + totalKOFix
+  const playedFix = playedGroupFix + playedKOFix
 
-  const unplayed = fixtures.filter(f => !f.played && !f.isBye).slice(0, 5)
-  const board    = calcLeaderboard(players, fixtures).slice(0, 5)
+  const pName = id => players.find(p => p.id === id)?.name ?? '???'
+  const board  = calcLeaderboard(players, fixtures).slice(0, 5)
+  const upcoming = fixtures.filter(f => !f.played && !f.isBye).slice(0, 5)
+  const recent   = fixtures.filter(f => f.played && !f.isBye).slice(-5).reverse()
 
-  const pName = id => players.find(p=>p.id===id)?.name ?? '???'
-
-  // Phase label
   const knockoutLocked = knockoutBracket?.locked
-  const allGroupDone   = totalGroupFixtures > 0 && playedGroupFixtures === totalGroupFixtures
-  let phase = 'REGISTRATION'
-  if      (knockoutLocked && playedKOFixtures === totalKOFixtures && totalKOFixtures > 0) phase = 'COMPLETE'
-  else if (knockoutLocked)    phase = 'KNOCKOUT'
-  else if (allGroupDone)      phase = 'KNOCKOUT SETUP'
-  else if (totalGroupFixtures > 0) phase = 'GROUP STAGE'
-  else if (groups.length > 0) phase = 'GROUP SETUP'
-
-  const phaseColors = {
-    'REGISTRATION': '#4a6a4a',
-    'GROUP SETUP':  '#6a6a00',
-    'GROUP STAGE':  '#4a8a4a',
-    'KNOCKOUT SETUP': '#8a7a00',
-    'KNOCKOUT':     '#c9960f',
-    'COMPLETE':     '#F5C518',
-  }
-  const phaseColor = phaseColors[phase] ?? '#4a6a4a'
+  const allGroupDone   = totalGroupFix > 0 && playedGroupFix === totalGroupFix
+  let stage = 'REGISTRATION'
+  if (knockoutLocked && playedKOFix === totalKOFix && totalKOFix > 0) stage = 'COMPLETE 🏆'
+  else if (knockoutLocked)   stage = 'KNOCKOUT'
+  else if (allGroupDone)     stage = 'KO SETUP'
+  else if (totalGroupFix > 0) stage = 'GROUP STAGE'
+  else if (groups.length > 0) stage = 'GROUP SETUP'
 
   const medals = ['🥇','🥈','🥉','4️⃣','5️⃣']
 
   return (
     <div className="fade-up">
-      {/* Tournament name + phase badge */}
-      <div style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ fontFamily: 'Bebas Neue', fontSize: 36, letterSpacing: 3, lineHeight: 1, marginBottom: 4,
-            background: 'linear-gradient(135deg, var(--gold-dim), var(--gold), #ffe066)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-          }}>
-            EA26 TOURNAMENT
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>TNC Community · FIFA PS5 Competition</p>
-        </div>
-        <div style={{
-          padding: '8px 18px', borderRadius: 20,
-          background: `${phaseColor}18`,
-          border: `1px solid ${phaseColor}50`,
-          fontFamily: 'Bebas Neue', fontSize: 14, letterSpacing: 3,
-          color: phaseColor,
-        }}>
-          {phase}
-        </div>
+      {/* Page title */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{
+          fontFamily: 'Bebas Neue', fontSize: 32, letterSpacing: 4, lineHeight: 1, marginBottom: 4,
+          background: 'linear-gradient(135deg, var(--gold-dim), var(--gold), #ffe066)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+        }}>EA26 TOURNAMENT MANAGER</h1>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: 2 }}>TNC COMMUNITY · FIFA PS5 COMPETITION</p>
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 28 }}>
-        <StatCard icon="👥" label="PLAYERS" value={players.length} color="#4a8a6a"
-          sub={groups.length > 0 ? `${groups.length} group${groups.length!==1?'s':''}` : 'Not grouped yet'} />
-        <StatCard icon="📋" label="GROUPS" value={groups.length || '—'} color="#4a6a9a"
-          sub={groups.length > 0 ? `${groups.map(g=>g.playerIds?.length??0).join(' · ')} players` : 'No groups yet'} />
-        <StatCard icon="⚽" label="MATCHES" value={playedFixtures || '—'}
-          color="#8a7a20"
-          sub={totalFixtures > 0 ? `of ${totalFixtures} total` : 'No fixtures yet'} />
-        {knockoutLocked && (
-          <StatCard icon="🏆" label="KO STAGE" value={playedKOFixtures}
-            color="var(--gold-dim)"
-            sub={`of ${totalKOFixtures} KO matches`} />
-        )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 24 }}>
+        <StatCard {...STAT_CARDS[0]}
+          value={players.length || '0'}
+          sub={groups.length > 0 ? `in ${groups.length} group${groups.length!==1?'s':''}` : undefined}
+        />
+        <StatCard {...STAT_CARDS[1]}
+          value={groups.length || '0'}
+          sub={groups.length > 0 ? groups.map(g => `${g.name}: ${(g.playerIds||[]).length}`).join(', ') : undefined}
+        />
+        <StatCard {...STAT_CARDS[2]}
+          value={totalFix > 0 ? `${playedFix}` : '0'}
+          sub={totalFix > 0 ? `/ ${totalFix} total` : 'No fixtures yet'}
+        />
+        <StatCard {...STAT_CARDS[3]}
+          value={stage}
+        />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 20 }}>
+      {/* Middle row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 16, marginBottom: 16 }}>
 
-        {/* Upcoming / recent matches */}
+        {/* Upcoming / Recent matches */}
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--green-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontFamily: 'Bebas Neue', fontSize: 16, letterSpacing: 2, color: 'var(--gold)' }}>
-              {unplayed.length > 0 ? 'UPCOMING MATCHES' : 'RECENT RESULTS'}
+          <div style={{
+            padding: '13px 18px', borderBottom: '1px solid rgba(40,80,40,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'linear-gradient(90deg, rgba(26,60,10,0.5), transparent)',
+          }}>
+            <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, letterSpacing: 2, color: 'var(--gold)' }}>
+              {upcoming.length > 0 ? 'UPCOMING MATCHES' : 'RECENT RESULTS'}
             </span>
-            {totalFixtures > 0 && (
+            {totalFix > 0 && (
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                {playedFixtures}/{totalFixtures} played
+                {playedFix}/{totalFix}
               </span>
             )}
           </div>
 
-          {unplayed.length === 0 && fixtures.length === 0 ? (
-            <div style={{ padding: '28px 18px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>📅</div>
-              No fixtures generated yet
-            </div>
-          ) : unplayed.length === 0 ? (
-            // Show recent results instead
-            <div style={{ padding: '0' }}>
-              {fixtures.filter(f => f.played && !f.isBye).slice(-5).reverse().map(f => (
-                <div key={f.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 18px', borderBottom: '1px solid #0a1a0a',
-                }}>
-                  <span style={{ flex: 1, fontWeight: 700, fontSize: 13, textAlign: 'right' }}>{pName(f.homeId)}</span>
-                  <span style={{
-                    padding: '3px 10px', borderRadius: 6,
-                    background: '#1a2e00', border: '1px solid #2a5a00',
-                    fontFamily: 'Bebas Neue', fontSize: 16, color: '#a0d060', letterSpacing: 2,
-                  }}>{f.homeScore}–{f.awayScore}</span>
-                  <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{pName(f.awayId)}</span>
-                </div>
-              ))}
+          {totalFix === 0 ? (
+            <div style={{ padding: '28px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.4 }}>📅</div>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>No fixtures yet</p>
             </div>
           ) : (
             <div>
-              {unplayed.map(f => (
+              {(upcoming.length > 0 ? upcoming : recent).map((f, i) => (
                 <div key={f.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 18px', borderBottom: '1px solid #0a1a0a',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 18px',
+                  borderBottom: i < 4 ? '1px solid rgba(20,40,20,0.6)' : 'none',
+                  transition: 'background 0.15s',
                 }}>
-                  <span style={{ flex: 1, fontWeight: 700, fontSize: 13, textAlign: 'right', color: '#c0d0c0' }}>{pName(f.homeId)}</span>
-                  <span style={{
-                    padding: '3px 10px', borderRadius: 6,
-                    background: '#0a1a0a', border: '1px solid #1a3a1a',
-                    fontFamily: 'Bebas Neue', fontSize: 14, color: 'var(--text-muted)', letterSpacing: 2,
-                  }}>VS</span>
-                  <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#c0d0c0' }}>{pName(f.awayId)}</span>
+                  <span style={{ fontFamily: 'Bebas Neue', fontSize: 12, color: 'var(--text-muted)', minWidth: 16 }}>
+                    {i+1}
+                  </span>
+                  <Avatar name={pName(f.homeId)} size={26} />
+                  <span style={{ flex: 1, fontWeight: 700, fontSize: 13, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {pName(f.homeId)}
+                  </span>
+                  <div style={{
+                    padding: '3px 10px', borderRadius: 6, minWidth: 52, textAlign: 'center',
+                    background: f.played ? 'rgba(26,60,0,0.8)' : 'rgba(10,20,10,0.6)',
+                    border: `1px solid ${f.played ? '#2a5a00' : '#1a3a1a'}`,
+                  }}>
+                    {f.played
+                      ? <span style={{ fontFamily: 'Bebas Neue', fontSize: 15, color: '#a0df60', letterSpacing: 2 }}>{f.homeScore}–{f.awayScore}</span>
+                      : <span style={{ fontFamily: 'Bebas Neue', fontSize: 12, color: 'var(--text-muted)', letterSpacing: 1 }}>VS</span>
+                    }
+                  </div>
+                  <span style={{ flex: 1, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {pName(f.awayId)}
+                  </span>
+                  <Avatar name={pName(f.awayId)} size={26} />
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Mini leaderboard */}
+        {/* Leaderboard */}
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--green-border)' }}>
-            <span style={{ fontFamily: 'Bebas Neue', fontSize: 16, letterSpacing: 2, color: 'var(--gold)' }}>
-              LEADERBOARD
+          <div style={{
+            padding: '13px 18px', borderBottom: '1px solid rgba(40,80,40,0.4)',
+            background: 'linear-gradient(90deg, rgba(60,40,0,0.5), transparent)',
+          }}>
+            <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, letterSpacing: 2, color: 'var(--gold)' }}>
+              TOP PLAYERS
             </span>
           </div>
 
           {board.length === 0 ? (
-            <div style={{ padding: '28px 18px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🏅</div>
-              No results yet
+            <div style={{ padding: '28px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.4 }}>🏅</div>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>No results yet</p>
             </div>
           ) : (
             <div>
               {board.map((p, idx) => (
                 <div key={p.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '10px 18px', borderBottom: '1px solid #0a1a0a',
-                  background: idx === 0 ? 'rgba(245,197,24,0.04)' : 'transparent',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 18px',
+                  borderBottom: idx < board.length-1 ? '1px solid rgba(20,40,20,0.6)' : 'none',
+                  background: idx === 0 ? 'rgba(245,197,24,0.05)' : 'transparent',
                 }}>
-                  <span style={{ fontSize: idx < 3 ? 18 : 14, minWidth: 24, textAlign: 'center',
+                  <span style={{ fontSize: idx < 3 ? 18 : 13, minWidth: 22, textAlign: 'center',
                     ...(idx >= 3 ? { fontFamily: 'Bebas Neue', color: 'var(--text-muted)' } : {})
                   }}>
                     {idx < 3 ? medals[idx] : `${idx+1}`}
                   </span>
-                  <span style={{ flex: 1, fontWeight: 700, fontSize: 14, color: idx===0?'var(--gold)':'var(--text-primary)' }}>
+                  <Avatar name={p.name} size={28} />
+                  <span style={{ flex: 1, fontWeight: 700, fontSize: 14, color: idx===0 ? 'var(--gold)' : 'var(--text-primary)' }}>
                     {p.name}
                   </span>
                   <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontFamily: 'Bebas Neue', fontSize: 22, color: idx===0?'var(--gold)':'var(--text-primary)' }}>
+                    <span style={{ fontFamily: 'Bebas Neue', fontSize: 22, color: idx===0 ? 'var(--gold)' : '#8ab08a' }}>
                       {p.Pts}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 4 }}>pts</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 3 }}>pts</span>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-
       </div>
 
       {/* Groups overview */}
       {groups.length > 0 && (
-        <div style={{ marginTop: 20 }}>
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--green-border)' }}>
-              <span style={{ fontFamily: 'Bebas Neue', fontSize: 16, letterSpacing: 2, color: 'var(--gold)' }}>
-                GROUPS
-              </span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 0 }}>
-              {groups.map(group => {
-                const groupPlayed  = fixtures.filter(f=>f.type==='group'&&f.groupId===group.id&&f.played).length
-                const groupTotal   = fixtures.filter(f=>f.type==='group'&&f.groupId===group.id).length
-                const groupPlayers = group.playerIds?.filter(id=>players.some(p=>p.id===id)) ?? []
-                return (
-                  <div key={group.id} style={{ padding: '14px 16px', borderRight: '1px solid #0f1f0f', borderBottom: '1px solid #0f1f0f' }}>
-                    <div style={{ fontFamily: 'Bebas Neue', fontSize: 14, letterSpacing: 2, color: 'var(--gold-dim)', marginBottom: 8 }}>
-                      {group.name}
-                    </div>
-                    {groupPlayers.map(id => (
-                      <div key={id} style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#2a5a2a', flexShrink: 0 }} />
-                        {pName(id)}
-                      </div>
-                    ))}
-                    {groupTotal > 0 && (
-                      <div style={{ marginTop: 8, fontSize: 11, color: '#3a6a3a' }}>
-                        {groupPlayed}/{groupTotal} played
-                      </div>
+        <div className="card" style={{ overflow: 'hidden' }}>
+          <div style={{
+            padding: '13px 18px', borderBottom: '1px solid rgba(40,80,40,0.4)',
+            background: 'linear-gradient(90deg, rgba(10,40,26,0.6), transparent)',
+          }}>
+            <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, letterSpacing: 2, color: 'var(--gold)' }}>
+              GROUPS OVERVIEW
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+            {groups.map((group, gi) => {
+              const grpPlayed = fixtures.filter(f=>f.type==='group'&&f.groupId===group.id&&f.played).length
+              const grpTotal  = fixtures.filter(f=>f.type==='group'&&f.groupId===group.id).length
+              const grpPlayers = (group.playerIds||[]).filter(id => players.some(p=>p.id===id))
+              const GROUP_COLORS = ['#1a4a8a','#1a6a3a','#6a1a3a','#4a1a6a','#6a4a1a','#1a5a5a','#5a2a1a','#3a5a1a']
+              const accentCol = GROUP_COLORS[gi % GROUP_COLORS.length]
+              return (
+                <div key={group.id} style={{
+                  padding: '14px 16px',
+                  borderRight: '1px solid rgba(20,40,20,0.5)',
+                  borderBottom: '1px solid rgba(20,40,20,0.5)',
+                  background: `linear-gradient(135deg, ${accentCol}15, transparent)`,
+                }}>
+                  <div style={{
+                    fontFamily: 'Bebas Neue', fontSize: 13, letterSpacing: 2,
+                    color: '#F5C518', marginBottom: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  }}>
+                    {group.name}
+                    {grpTotal > 0 && (
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'Barlow' }}>
+                        {grpPlayed}/{grpTotal}
+                      </span>
                     )}
                   </div>
-                )
-              })}
-            </div>
+                  {grpPlayers.map(id => (
+                    <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                      <Avatar name={pName(id)} size={22} />
+                      <span style={{ fontSize: 12, color: '#b0c8b0', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {pName(id)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

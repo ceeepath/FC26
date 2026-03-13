@@ -7,7 +7,7 @@ import KnockoutBracket from './components/KnockoutBracket'
 import Leaderboard from './components/LeaderBoard'
 import WhatsAppExport from './components/WhatsAppExport'
 import Dashboard from './components/Dashboard'
-import Sidebar from './components/Sidebar'
+import Sidebar, { SidebarContent } from './components/Sidebar'
 import Settings from './components/Settings'
 import AdminLogin from './components/AdminLogin'
 import { load, save, KEYS } from './utils/storage'
@@ -74,34 +74,24 @@ export default function App() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
 
-      {/* ── Sidebar ── */}
+      {/* ── Desktop Sidebar ── */}
       {!isMobile && (
-        <div style={{
-          position: 'fixed', left: 0, top: 0, bottom: 0,
-          width: 200, zIndex: 50,
-        }}>
-          <Sidebar
-            tabs={TABS} activeTab={activeTab}
-            onTabClick={handleTabClick}
-            isAdmin={isAdmin}
-            onAdminClick={() => setShowLogin(true)}
-            onLogout={handleLogout}
-            mobileOpen={false}
-            onMobileClose={() => {}}
+        <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 200, zIndex: 50 }}>
+          <SidebarContent
+            activeTab={activeTab} tabs={TABS}
+            onTabClick={handleTabClick} isAdmin={isAdmin}
+            onAdminClick={() => setShowLogin(true)} onLogout={handleLogout}
           />
         </div>
       )}
 
-      {/* Mobile sidebar drawer */}
+      {/* ── Mobile Sidebar drawer ── */}
       {isMobile && (
         <Sidebar
           tabs={TABS} activeTab={activeTab}
-          onTabClick={handleTabClick}
-          isAdmin={isAdmin}
-          onAdminClick={() => setShowLogin(true)}
-          onLogout={handleLogout}
-          mobileOpen={mobileOpen}
-          onMobileClose={() => setMobileOpen(false)}
+          onTabClick={handleTabClick} isAdmin={isAdmin}
+          onAdminClick={() => setShowLogin(true)} onLogout={handleLogout}
+          mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)}
         />
       )}
 
