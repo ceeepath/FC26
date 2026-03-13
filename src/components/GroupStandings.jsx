@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CopyButton } from './WhatsAppExport'
 import { exportGroupStandings } from '../utils/whatsapp'
+import Avatar from './Avatar'
 
 const GROUP_COLORS = [
   { border: '#c9960f', bg: '#1a1200', label: 'var(--gold)',  },
@@ -324,15 +325,28 @@ export default function GroupStandings({ players, groups, fixtures, qualifierCon
                           </td>
                           <td style={{ ...tdStyle('left'), fontWeight: 700 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <Avatar name={row.name} size={26} />
                               {isDirect && <span title="Direct qualifier">{isFirst ? '🥇' : idx === 1 ? '🥈' : '✅'}</span>}
                               {isWildcard && <span title="Wildcard">🃏</span>}
                               {row.name}
                             </div>
                           </td>
                           <td style={tdStyle()}>{row.P}</td>
-                          <td style={{ ...tdStyle(), color: '#4caf50', fontWeight: row.W > 0 ? 700 : 400 }}>{row.W}</td>
-                          <td style={{ ...tdStyle(), color: row.D > 0 ? 'var(--gold)' : 'var(--text-muted)' }}>{row.D}</td>
-                          <td style={{ ...tdStyle(), color: row.L > 0 ? 'var(--danger)' : 'var(--text-muted)' }}>{row.L}</td>
+                          <td style={tdStyle()}>
+                            <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+                              {Array.from({length: row.W}).map((_,i) => <span key={i} className="wdl-dot dot-win" />)}
+                            </div>
+                          </td>
+                          <td style={tdStyle()}>
+                            <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+                              {Array.from({length: row.D}).map((_,i) => <span key={i} className="wdl-dot dot-draw" />)}
+                            </div>
+                          </td>
+                          <td style={tdStyle()}>
+                            <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+                              {Array.from({length: row.L}).map((_,i) => <span key={i} className="wdl-dot dot-loss" />)}
+                            </div>
+                          </td>
                           <td style={tdStyle()}>{row.GF}</td>
                           <td style={tdStyle()}>{row.GA}</td>
                           <td style={{

@@ -1,8 +1,6 @@
-import { useState } from 'react'
-
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard',   icon: '⚡' },
-  { id: 'players',   label: 'Players',     icon: '⚽' },
+  { id: 'players',   label: 'Players',     icon: '👥' },
   { id: 'groups',    label: 'Groups',      icon: '📋' },
   { id: 'fixtures',  label: 'Fixtures',    icon: '📅' },
   { id: 'standings', label: 'Standings',   icon: '📊' },
@@ -12,13 +10,7 @@ const NAV_ITEMS = [
   { id: 'settings',  label: 'Settings',    icon: '⚙️', adminOnly: true },
 ]
 
-export default function Sidebar({
-  activeTab, onTabClick, isAdmin,
-  onAdminClick, onLogout,
-  mobileOpen, onMobileClose,
-  tabs, // locked state comes from here
-}) {
-  // Build a map of locked/adminOnly state from the tabs array
+function SidebarContent({ activeTab, tabs, onTabClick, isAdmin, onAdminClick, onLogout, onClose }) {
   const tabMap = {}
   tabs.forEach(t => { tabMap[t.id] = t })
 
@@ -26,43 +18,44 @@ export default function Sidebar({
     const tab = tabMap[item.id]
     if (!tab) return
     onTabClick(tab)
-    onMobileClose()
+    if (onClose) onClose()
   }
 
-  const sidebarContent = (
+  return (
     <div style={{
-      display: 'flex', flexDirection: 'column',
-      height: '100%',
-      background: 'linear-gradient(180deg, #070f07 0%, #040a04 100%)',
-      borderRight: '1px solid #1a3a1a',
+      display: 'flex', flexDirection: 'column', height: '100%',
+      background: 'linear-gradient(180deg, #060d06 0%, #030803 100%)',
+      borderRight: '1px solid rgba(30,60,30,0.6)',
+      boxShadow: '4px 0 24px rgba(0,0,0,0.5)',
     }}>
       {/* Logo */}
       <div style={{
-        padding: '20px 20px 16px',
-        borderBottom: '1px solid #0f2a0f',
+        padding: '18px 16px 14px',
+        borderBottom: '1px solid rgba(30,60,30,0.5)',
+        background: 'linear-gradient(180deg, rgba(26,60,10,0.3), transparent)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 36, height: 36, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #1a3a0a, #0a1f0a)',
-            border: '2px solid var(--gold-dim)',
+            width: 38, height: 38, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #1a4a0a, #0a2a04)',
+            border: '2px solid rgba(245,197,24,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 16, flexShrink: 0,
-            boxShadow: '0 0 10px rgba(245,197,24,0.15)',
+            fontSize: 18, flexShrink: 0,
+            boxShadow: '0 0 16px rgba(245,197,24,0.15)',
           }}>⚽</div>
           <div>
             <div style={{
-              fontFamily: 'Bebas Neue', fontSize: 17, letterSpacing: 3, lineHeight: 1,
-              background: 'linear-gradient(135deg, var(--gold-dim), var(--gold))',
+              fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 3, lineHeight: 1.1,
+              background: 'linear-gradient(135deg, #c9960f, #F5C518, #ffe066)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
             }}>EA26</div>
-            <div style={{ fontSize: 9, color: '#4a6a4a', letterSpacing: 2 }}>TNC · FIFA PS5</div>
+            <div style={{ fontSize: 9, color: '#3a5a3a', letterSpacing: 2, marginTop: 1 }}>TOURNAMENT MGR</div>
           </div>
         </div>
       </div>
 
-      {/* Nav items */}
-      <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }}>
         {NAV_ITEMS.map(item => {
           const tab = tabMap[item.id]
           if (!tab) return null
@@ -73,34 +66,44 @@ export default function Sidebar({
 
           return (
             <button key={item.id}
-              onClick={() => handleClick(item)}
-              disabled={disabled}
+              onClick={() => !disabled && handleClick(item)}
               title={isLocked ? 'Complete previous steps to unlock' : ''}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 12px', borderRadius: 8, marginBottom: 2,
-                border: isActive ? '1px solid rgba(245,197,24,0.2)' : '1px solid transparent',
+                padding: '9px 12px', borderRadius: 8, marginBottom: 1,
+                border: isActive
+                  ? '1px solid rgba(245,197,24,0.25)'
+                  : '1px solid transparent',
                 background: isActive
-                  ? 'linear-gradient(90deg, rgba(245,197,24,0.1), rgba(245,197,24,0.04))'
+                  ? 'linear-gradient(90deg, rgba(245,197,24,0.12), rgba(245,197,24,0.04))'
                   : 'transparent',
                 cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.3 : 1,
+                opacity: disabled ? 0.28 : 1,
                 transition: 'all 0.15s',
+                position: 'relative',
               }}
-              onMouseEnter={e => { if (!disabled && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+              onMouseEnter={e => { if (!disabled && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
             >
-              <span style={{ fontSize: 15, flexShrink: 0 }}>{item.icon}</span>
+              {/* Active bar */}
+              {isActive && (
+                <div style={{
+                  position: 'absolute', left: 0, top: '20%', bottom: '20%',
+                  width: 3, borderRadius: '0 3px 3px 0',
+                  background: 'var(--gold)',
+                  boxShadow: '0 0 8px var(--gold)',
+                }} />
+              )}
+              <span style={{ fontSize: 14, flexShrink: 0 }}>{item.icon}</span>
               <span style={{
-                fontFamily: 'Barlow', fontWeight: 700, fontSize: 13,
-                color: isActive ? 'var(--gold)' : '#7a9a7a',
-                letterSpacing: 0.3,
+                fontFamily: 'Barlow', fontWeight: 700, fontSize: 12,
+                color: isActive ? 'var(--gold)' : '#6a8a6a',
+                letterSpacing: 0.4,
               }}>{item.label}</span>
               {isActive && (
                 <div style={{
                   marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%',
-                  background: 'var(--gold)',
-                  boxShadow: '0 0 6px var(--gold)',
+                  background: 'var(--gold)', boxShadow: '0 0 6px var(--gold)',
                 }} />
               )}
               {(isLocked || isAdminTab) && (
@@ -111,40 +114,40 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Admin section */}
-      <div style={{ padding: '12px 12px 16px', borderTop: '1px solid #0f2a0f' }}>
+      {/* Divider + Admin */}
+      <div style={{ padding: '10px 10px 14px', borderTop: '1px solid rgba(20,40,20,0.5)' }}>
         {isAdmin ? (
-          <div>
+          <>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              padding: '8px 12px', borderRadius: 8, marginBottom: 6,
-              background: 'rgba(100,200,50,0.06)',
-              border: '1px solid rgba(100,200,50,0.15)',
+              padding: '7px 12px', borderRadius: 8, marginBottom: 6,
+              background: 'rgba(80,180,40,0.08)',
+              border: '1px solid rgba(80,180,40,0.2)',
             }}>
-              <span style={{ fontSize: 13 }}>🛡</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#6ad46a', letterSpacing: 1 }}>ADMIN</span>
+              <span style={{ fontSize: 12 }}>🛡</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#6ad46a', letterSpacing: 1 }}>ADMIN MODE</span>
             </div>
             <button onClick={onLogout} style={{
               width: '100%', padding: '7px 12px', borderRadius: 8,
-              background: 'transparent', border: '1px solid #1a2a1a',
-              color: '#4a6a4a', fontSize: 12, fontFamily: 'Barlow', fontWeight: 600,
-              cursor: 'pointer', transition: 'all 0.15s',
+              background: 'transparent', border: '1px solid rgba(224,82,82,0.15)',
+              color: '#6a4a4a', fontSize: 11, fontFamily: 'Barlow', fontWeight: 700,
+              cursor: 'pointer', letterSpacing: 0.5, transition: 'all 0.15s',
             }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--danger)'; e.currentTarget.style.color = 'var(--danger)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a2a1a'; e.currentTarget.style.color = '#4a6a4a' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(224,82,82,0.15)'; e.currentTarget.style.color = '#6a4a4a' }}
             >
               Logout
             </button>
-          </div>
+          </>
         ) : (
           <button onClick={onAdminClick} style={{
             width: '100%', padding: '9px 12px', borderRadius: 8,
-            background: 'transparent', border: '1px solid #1a3a1a',
-            color: '#5a8a5a', fontSize: 12, fontFamily: 'Barlow', fontWeight: 700,
-            cursor: 'pointer', transition: 'all 0.15s', letterSpacing: 0.5,
+            background: 'transparent', border: '1px solid rgba(40,80,40,0.5)',
+            color: '#4a7a4a', fontSize: 11, fontFamily: 'Barlow', fontWeight: 700,
+            cursor: 'pointer', letterSpacing: 0.5, transition: 'all 0.15s',
           }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold-dim)'; e.currentTarget.style.color = 'var(--gold)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a3a1a'; e.currentTarget.style.color = '#5a8a5a' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(245,197,24,0.4)'; e.currentTarget.style.color = 'var(--gold)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(40,80,40,0.5)'; e.currentTarget.style.color = '#4a7a4a' }}
           >
             🔐 Admin Login
           </button>
@@ -152,34 +155,41 @@ export default function Sidebar({
       </div>
     </div>
   )
+}
 
+export default function Sidebar({
+  activeTab, onTabClick, isAdmin, onAdminClick, onLogout,
+  mobileOpen, onMobileClose, tabs,
+}) {
   return (
     <>
-      {/* Desktop sidebar */}
-      <div style={{
-        position: 'fixed', left: 0, top: 0, bottom: 0,
-        width: 200, zIndex: 50,
-        display: 'none',
-      }} className="sidebar-desktop">
-        {sidebarContent}
-      </div>
-
-      {/* Mobile drawer */}
+      {/* Overlay for mobile */}
       {mobileOpen && (
-        <>
-          <div onClick={onMobileClose} style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            zIndex: 199, backdropFilter: 'blur(2px)',
-          }} />
-          <div style={{
-            position: 'fixed', left: 0, top: 0, bottom: 0,
-            width: 220, zIndex: 200,
-            animation: 'slideInLeft 0.25s ease',
-          }}>
-            {sidebarContent}
-          </div>
-        </>
+        <div onClick={onMobileClose} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          zIndex: 199, backdropFilter: 'blur(3px)',
+        }} />
       )}
+
+      {/* Drawer (used for both desktop fixed + mobile slide-in) */}
+      {mobileOpen && (
+        <div style={{
+          position: 'fixed', left: 0, top: 0, bottom: 0,
+          width: 200, zIndex: 200,
+          animation: 'slideInLeft 0.22s cubic-bezier(0.2, 0, 0, 1)',
+        }}>
+          <SidebarContent
+            activeTab={activeTab} tabs={tabs}
+            onTabClick={onTabClick} isAdmin={isAdmin}
+            onAdminClick={onAdminClick} onLogout={onLogout}
+            onClose={onMobileClose}
+          />
+        </div>
+      )}
+
+      {/* Desktop fixed sidebar — rendered via a portal-like div in App.jsx */}
     </>
   )
 }
+
+export { SidebarContent }
