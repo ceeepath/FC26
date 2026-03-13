@@ -136,7 +136,7 @@ function FixtureRow({ fixture, idx, playerName, color, canEnter, canEdit, onEdit
             </span>
           ) : (
             <span style={{ fontFamily: 'Bebas Neue', fontSize: 13, color: clickable ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: 1 }}>
-              {clickable ? 'TAP' : 'VS'}
+              VS
             </span>
           )}
         </div>
@@ -528,7 +528,7 @@ export default function FixtureSetup({
                       }}>
                         {fixture.played
                           ? <span style={{ fontFamily: 'Bebas Neue', fontSize: 16, color: '#a0d060', letterSpacing: 2 }}>{fixture.homeScore} – {fixture.awayScore}</span>
-                          : <span style={{ fontFamily: 'Bebas Neue', fontSize: 13, color: canEnter ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: 1 }}>{canEnter ? 'TAP' : 'VS'}</span>
+                          : <span style={{ fontFamily: 'Bebas Neue', fontSize: 13, color: canEnter ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: 1 }}>VS</span>
                         }
                       </div>
                       <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{playerName(fixture.awayId)}</span>
