@@ -4,7 +4,7 @@ import GroupSetup from './components/GroupSetup'
 import FixtureSetup from './components/FixtureSetup'
 import GroupStandings from './components/GroupStandings'
 import KnockoutBracket from './components/KnockoutBracket'
-import TopScorers from './components/TopScorers'
+import Leaderboard from './components/LeaderBoard'
 import Settings from './components/Settings'
 import AdminLogin from './components/AdminLogin'
 import { load, save, KEYS } from './utils/storage'
@@ -45,7 +45,7 @@ export default function App() {
     { id:'fixtures',  label:'📅 Fixtures',  locked:!groupsLocked },
     { id:'standings', label:'📊 Standings', locked:!fixturesGenerated },
     { id:'knockout',  label:'🏆 Knockout',  locked:!fixturesGenerated },
-    { id:'scorers',   label:'🔥 Scorers',   locked:!fixturesGenerated },
+    { id:'scorers',   label:'🏅 Leaderboard', locked:!fixturesGenerated },
     { id:'settings',  label:'⚙️ Settings',  adminOnly:true },
   ]
 
@@ -181,7 +181,7 @@ export default function App() {
           />
         )}
         {activeTab==='scorers' && (
-          <TopScorers players={players} fixtures={fixtures} />
+          <Leaderboard players={players} fixtures={fixtures} />
         )}
         {activeTab==='settings' && isAdmin && (
           <Settings settings={settings} setSettings={setSettings} onLogout={handleLogout} />
