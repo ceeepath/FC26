@@ -25,6 +25,7 @@ export default function App() {
   const [groupsLocked, setGroupsLocked] = useState(() => load(KEYS.GROUPS_LOCKED, false))
   const [fixtures, setFixtures] = useState(() => load(KEYS.FIXTURES, []))
   const [fixtureConfig, setFixtureConfig] = useState(() => load(KEYS.FIXTURE_CONFIG, DEFAULT_FIXTURE_CONFIG))
+  const [fixturesLocked, setFixturesLocked] = useState(() => load(KEYS.FIXTURES_LOCKED, false))
   const [settings, setSettings] = useState(() => load(KEYS.SETTINGS, DEFAULT_SETTINGS))
   const [isAdmin, setIsAdmin] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
@@ -35,6 +36,7 @@ export default function App() {
   useEffect(() => { save(KEYS.GROUPS_LOCKED, groupsLocked) }, [groupsLocked])
   useEffect(() => { save(KEYS.FIXTURES, fixtures) }, [fixtures])
   useEffect(() => { save(KEYS.FIXTURE_CONFIG, fixtureConfig) }, [fixtureConfig])
+  useEffect(() => { save(KEYS.FIXTURES_LOCKED, fixturesLocked) }, [fixturesLocked])
   useEffect(() => { save(KEYS.SETTINGS, settings) }, [settings])
 
   const TABS = [
@@ -171,6 +173,7 @@ export default function App() {
             players={players} groups={groups}
             fixtures={fixtures} setFixtures={setFixtures}
             fixtureConfig={fixtureConfig} setFixtureConfig={setFixtureConfig}
+            fixturesLocked={fixturesLocked} setFixturesLocked={setFixturesLocked}
             isAdmin={isAdmin}
           />
         )}

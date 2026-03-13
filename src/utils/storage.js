@@ -4,6 +4,7 @@ export const KEYS = {
   GROUPS_LOCKED: 'ea26_groups_locked',
   FIXTURES: 'ea26_fixtures',
   FIXTURE_CONFIG: 'ea26_fixture_config',
+  FIXTURES_LOCKED: 'ea26_fixtures_locked',
   SETTINGS: 'ea26_settings',
 }
 
