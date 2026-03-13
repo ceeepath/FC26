@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { generateId } from '../utils/storage'
+import { CopyButton } from './WhatsAppExport'
+import { exportKnockoutResults } from '../utils/whatsapp'
 
 // ── Shared helpers (mirror GroupStandings) ──────────────────────────────────
 
@@ -396,15 +398,18 @@ export default function KnockoutBracket({
     <div className="fade-up">
 
       {/* Header */}
-      <div style={{ marginBottom:24 }}>
-        <h2 style={{ fontFamily:'Bebas Neue', fontSize:32, color:'var(--gold)', letterSpacing:2 }}>KNOCKOUT STAGE</h2>
-        <p style={{ color:'var(--text-muted)', fontSize:14 }}>
-          {!locked
-            ? `${qualified.length} player${qualified.length!==1?'s':''} qualified · Set seeding then lock bracket to begin.`
-            : champion
-              ? `🏆 Tournament complete!`
-              : 'Knockout stage in progress · enter results to advance players.'}
-        </p>
+      <div style={{ marginBottom:24, display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
+        <div>
+          <h2 style={{ fontFamily:'Bebas Neue', fontSize:32, color:'var(--gold)', letterSpacing:2 }}>KNOCKOUT STAGE</h2>
+          <p style={{ color:'var(--text-muted)', fontSize:14 }}>
+            {!locked
+              ? `${qualified.length} player${qualified.length!==1?'s':''} qualified · Set seeding then lock bracket to begin.`
+              : champion
+                ? `🏆 Tournament complete!`
+                : 'Knockout stage in progress · enter results to advance players.'}
+          </p>
+        </div>
+        {locked && <CopyButton text={exportKnockoutResults(players, fixtures, knockoutBracket, fixtureConfig)} label="📋 Copy" size="small" />}
       </div>
 
       {/* Champion banner */}

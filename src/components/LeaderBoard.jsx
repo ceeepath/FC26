@@ -1,4 +1,6 @@
 const MEDAL = ['🥇', '🥈', '🥉']
+import { CopyButton } from './WhatsAppExport'
+import { exportLeaderboard } from '../utils/whatsapp'
 
 function calcLeaderboard(players, fixtures) {
   const played = fixtures.filter(f => f.played && !f.isBye)
@@ -67,13 +69,16 @@ export default function Leaderboard({ players, fixtures }) {
   return (
     <div className="fade-up">
       {/* Header */}
-      <div style={{ marginBottom:24 }}>
-        <h2 style={{ fontFamily:'Bebas Neue', fontSize:32, color:'var(--gold)', letterSpacing:2 }}>LEADERBOARD</h2>
-        <p style={{ color:'var(--text-muted)', fontSize:14 }}>
-          {played === 0
-            ? 'No matches played yet.'
-            : `Ranked by total points across all ${played} played match${played!==1?'es':''}. Goals scored as tiebreaker.`}
-        </p>
+      <div style={{ marginBottom:24, display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
+        <div>
+          <h2 style={{ fontFamily:'Bebas Neue', fontSize:32, color:'var(--gold)', letterSpacing:2 }}>LEADERBOARD</h2>
+          <p style={{ color:'var(--text-muted)', fontSize:14 }}>
+            {played === 0
+              ? 'No matches played yet.'
+              : `Ranked by total points across all ${played} played match${played!==1?'es':''}. Goals scored as tiebreaker.`}
+          </p>
+        </div>
+        <CopyButton text={exportLeaderboard(players, fixtures)} label="📋 Copy" size="small" />
       </div>
 
       {board.length === 0 ? (
