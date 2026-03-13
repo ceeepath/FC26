@@ -40,6 +40,8 @@ export default function App() {
   useEffect(() => { save(KEYS.FIXTURES_LOCKED, fixturesLocked) }, [fixturesLocked])
   useEffect(() => { save(KEYS.SETTINGS, settings) }, [settings])
 
+  const fixturesGenerated = fixtures.length > 0
+
   const TABS = [
     { id: 'players',   label: '⚽ Players' },
     { id: 'groups',    label: '📋 Groups' },
@@ -65,7 +67,6 @@ export default function App() {
   }
 
   // Phase logic
-  const fixturesGenerated = fixtures.length > 0
   let phaseIcon = '🏆', phaseTitle = 'PHASE 1 — PLAYER REGISTRATION'
   let phaseDesc = 'Add all players before assigning groups.'
   if (fixturesGenerated) {
