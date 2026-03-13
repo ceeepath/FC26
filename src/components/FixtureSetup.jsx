@@ -64,7 +64,7 @@ function ScoreEntry({ fixture, playerName, onSave, onCancel }) {
           type="number" min="0" value={home}
           onChange={e => { setHome(e.target.value); setErr('') }}
           autoFocus
-          style={{ width: 60, textAlign: 'center', fontSize: 20, fontFamily: 'Bebas Neue', padding: '6px 8px' }}
+          style={{ width: 60, textAlign: 'center', fontSize: 20, fontFamily: 'Bebas Neue', padding: '6px 8px', color: '#111111', background: '#ffffff', border: '1px solid var(--gold)', borderRadius: 8 }}
         />
 
         <span style={{ fontFamily: 'Bebas Neue', fontSize: 18, color: 'var(--text-muted)' }}>–</span>
@@ -72,7 +72,7 @@ function ScoreEntry({ fixture, playerName, onSave, onCancel }) {
         <input
           type="number" min="0" value={away}
           onChange={e => { setAway(e.target.value); setErr('') }}
-          style={{ width: 60, textAlign: 'center', fontSize: 20, fontFamily: 'Bebas Neue', padding: '6px 8px' }}
+          style={{ width: 60, textAlign: 'center', fontSize: 20, fontFamily: 'Bebas Neue', padding: '6px 8px', color: '#111111', background: '#ffffff', border: '1px solid var(--gold)', borderRadius: 8 }}
         />
 
         {/* Away */}

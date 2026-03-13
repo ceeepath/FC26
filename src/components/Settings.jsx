@@ -51,7 +51,7 @@ export default function Settings({ settings, setSettings, onLogout }) {
             max="128"
             value={minInput}
             onChange={e => { setMinInput(e.target.value); setMinMsg('') }}
-            style={{ width: 100 }}
+            style={{ width: 100, color: '#111111', background: '#ffffff', border: '1px solid var(--gold)', borderRadius: 8, padding: '8px 10px' }}
           />
           <button type="submit" className="btn-gold">Save</button>
         </form>
