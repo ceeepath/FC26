@@ -3,6 +3,195 @@ import { generateId } from '../utils/storage'
 import { CopyButton } from './WhatsAppExport'
 import { exportKnockoutResults } from '../utils/whatsapp'
 
+// ── Bracket Tree Visual ──────────────────────────────────────────────────────
+
+function BracketTree({ fixtures, knockoutBracket, players, fixtureConfig }) {
+  const { totalRounds } = knockoutBracket
+  if (!totalRounds) return null
+
+  const CARD_W  = 160
+  const CARD_H  = 64
+  const SLOT_H  = 88
+  const CONN_W  = 28
+  const COL_GAP = 16
+  const COL_W   = CARD_W + CONN_W + COL_GAP
+  const LABEL_H = 30
+
+  const pName = id => {
+    if (!id || id === 'BYE') return 'BYE'
+    return players.find(p => p.id === id)?.name ?? '???'
+  }
+
+  const koFix = fixtures.filter(f => f.type === 'knockout')
+  const roundNums = [...new Set(koFix.map(f => f.roundNum))].sort((a,b)=>a-b)
+  const rounds = roundNums.map(rn => ({
+    rn,
+    pairs: [...new Set(koFix.filter(f=>f.roundNum===rn).map(f=>f.pairIdx))].sort((a,b)=>a-b),
+  }))
+
+  if (!rounds.length) return null
+
+  const firstRoundPairs = rounds[0].pairs.length
+  const totalH = firstRoundPairs * SLOT_H + LABEL_H + 20
+
+  return (
+    <div style={{ overflowX: 'auto', overflowY: 'visible', paddingBottom: 8 }}>
+      <div style={{
+        position: 'relative',
+        height: totalH,
+        minWidth: rounds.length * COL_W,
+        width: rounds.length * COL_W,
+      }}>
+        {rounds.map(({ rn, pairs }, ri) => {
+          const isLast   = ri === rounds.length - 1
+          const slotMult = Math.pow(2, ri)
+          const slotH    = SLOT_H * slotMult
+          const x        = ri * COL_W
+          const legs     = getLegCount(rn, totalRounds, fixtureConfig)
+
+          return pairs.map((pairIdx, pi) => {
+            const pf   = koFix.filter(f => f.roundNum===rn && f.pairIdx===pairIdx)
+            const leg1 = pf.find(f => f.leg===1)
+            if (!leg1) return null
+
+            const winner = getPairWinner(rn, pairIdx, fixtures, legs)
+            const isBye  = leg1.isBye
+
+            const yCenter = LABEL_H + pi * slotH + slotH / 2
+
+            // Agg score for 2-leg
+            let homeScore = '', awayScore = ''
+            if (isBye) { homeScore = '—'; awayScore = '' }
+            else if (legs === 2) {
+              const leg2 = pf.find(f=>f.leg===2)
+              if (leg1.played && leg2?.played) {
+                homeScore = String((leg1.homeScore??0)+(leg2.awayScore??0))
+                awayScore = String((leg1.awayScore??0)+(leg2.homeScore??0))
+              }
+            } else if (leg1.played) {
+              homeScore = String(leg1.homeScore??'')
+              awayScore = String(leg1.awayScore??'')
+            }
+
+            // Connector logic
+            const isTopOfPair = pi % 2 === 0
+            const nextYCenter = LABEL_H + Math.floor(pi/2) * slotH*2 + slotH
+
+            return (
+              <div key={`${rn}-${pairIdx}`}>
+                {/* Round label - only on first pair */}
+                {pi === 0 && (
+                  <div style={{
+                    position: 'absolute', left: x, top: 0, width: CARD_W,
+                    textAlign: 'center', fontFamily: 'Bebas Neue',
+                    fontSize: 11, letterSpacing: 2,
+                    color: rn === totalRounds ? 'var(--gold)' : 'var(--text-muted)',
+                  }}>
+                    {getRoundLabel(rn, totalRounds)}
+                  </div>
+                )}
+
+                {/* Match card */}
+                <div style={{
+                  position: 'absolute',
+                  left: x, top: yCenter - CARD_H/2,
+                  width: CARD_W, height: CARD_H,
+                  background: winner ? 'linear-gradient(135deg,#0a1f0a,#071007)' : '#060d06',
+                  border: `1px solid ${winner ? '#2a5a1a' : '#162816'}`,
+                  borderRadius: 8, overflow: 'hidden',
+                  boxShadow: winner ? '0 2px 12px rgba(76,175,80,0.1)' : 'none',
+                }}>
+                  {/* Home */}
+                  <div style={{
+                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                    padding:'0 10px', height: '50%',
+                    background: winner===leg1.homeId ? 'rgba(245,197,24,0.07)' : 'transparent',
+                    borderBottom:'1px solid #0f2a0f',
+                  }}>
+                    <span style={{
+                      fontSize:12, fontWeight:700, flex:1,
+                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                      color: winner===leg1.homeId ? 'var(--gold)' : homeScore?'#d0e0d0':'#5a7a5a',
+                    }}>{pName(leg1.homeId)}</span>
+                    <span style={{ fontFamily:'Bebas Neue', fontSize:16, color:'#a0d060', minWidth:18, textAlign:'right' }}>
+                      {homeScore}
+                    </span>
+                  </div>
+                  {/* Away */}
+                  <div style={{
+                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                    padding:'0 10px', height:'50%',
+                    background: winner===leg1.awayId ? 'rgba(245,197,24,0.07)' : 'transparent',
+                  }}>
+                    <span style={{
+                      fontSize:12, fontWeight:700, flex:1,
+                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                      color: winner===leg1.awayId ? 'var(--gold)' : awayScore?'#d0e0d0':'#5a7a5a',
+                    }}>{isBye ? <em style={{color:'#3a5a3a'}}>BYE</em> : pName(leg1.awayId)}</span>
+                    <span style={{ fontFamily:'Bebas Neue', fontSize:16, color:'#a0d060', minWidth:18, textAlign:'right' }}>
+                      {awayScore}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Connector lines to next round */}
+                {!isLast && (
+                  <>
+                    {/* Horizontal right arm from card */}
+                    <div style={{
+                      position:'absolute',
+                      left: x + CARD_W, top: yCenter - 1,
+                      width: CONN_W, height: 2,
+                      background: winner ? '#2a5a2a' : '#162816',
+                    }} />
+                    {/* Vertical connector (top of pair draws DOWN, bottom draws UP) */}
+                    {isTopOfPair ? (
+                      <div style={{
+                        position:'absolute',
+                        left: x + CARD_W + CONN_W - 1, top: yCenter,
+                        width: 2, height: nextYCenter - yCenter,
+                        background: '#162816',
+                      }} />
+                    ) : (
+                      <>
+                        <div style={{
+                          position:'absolute',
+                          left: x + CARD_W + CONN_W - 1, top: nextYCenter,
+                          width: 2, height: yCenter - nextYCenter,
+                          background: '#162816',
+                        }} />
+                        {/* Exit arm to next column */}
+                        <div style={{
+                          position:'absolute',
+                          left: x + CARD_W + CONN_W - 1, top: nextYCenter - 1,
+                          width: COL_GAP + 1, height: 2,
+                          background: '#162816',
+                        }} />
+                      </>
+                    )}
+                  </>
+                )}
+
+                {/* Winner label on final */}
+                {isLast && winner && (
+                  <div style={{
+                    position:'absolute',
+                    left: x + CARD_W + 8, top: yCenter - 10,
+                    fontSize: 11, color: 'var(--gold)', fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    🏆 {pName(winner)}
+                  </div>
+                )}
+              </div>
+            )
+          })
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Shared helpers (mirror GroupStandings) ──────────────────────────────────
 
 function calcStandings(group, players, fixtures) {
@@ -127,6 +316,7 @@ export default function KnockoutBracket({
 }) {
   const [selectedSeedIdx, setSelectedSeedIdx] = useState(null)
   const [editingId, setEditingId] = useState(null)
+  const [bracketView, setBracketView] = useState('cards') // 'cards' | 'bracket'
 
   const qualified  = getQualifiedPlayers(groups, players, fixtures, qualifierConfig)
   const canEnter   = isAdmin || openResultEntry
@@ -516,15 +706,45 @@ export default function KnockoutBracket({
       {/* ── LOCKED BRACKET: Rounds ── */}
       {locked && (
         <>
-          {isAdmin && (
-            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:16 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:8 }}>
+            {/* View toggle */}
+            <div style={{ display:'flex', gap:6 }}>
+              {[
+                { id:'cards',   label:'📋 Match Cards' },
+                { id:'bracket', label:'🌿 Bracket View' },
+              ].map(v => (
+                <button key={v.id} onClick={() => setBracketView(v.id)} style={{
+                  padding:'7px 14px', borderRadius:8, cursor:'pointer',
+                  fontFamily:'Barlow', fontWeight:700, fontSize:12,
+                  border:`1px solid ${bracketView===v.id ? 'var(--gold)' : 'var(--green-border)'}`,
+                  background: bracketView===v.id ? 'rgba(245,197,24,0.08)' : 'transparent',
+                  color: bracketView===v.id ? 'var(--gold)' : 'var(--text-muted)',
+                  transition:'all 0.15s',
+                }}>{v.label}</button>
+              ))}
+            </div>
+            {isAdmin && (
               <button className="btn-ghost" style={{ fontSize:12 }} onClick={handleUnlock}>
                 🔓 Reset Bracket
               </button>
+            )}
+          </div>
+
+          {/* Bracket tree view */}
+          {bracketView === 'bracket' && (
+            <div className="card" style={{ padding:20, marginBottom:20, overflow:'hidden' }}>
+              <p style={{ fontSize:12, color:'var(--text-muted)', marginBottom:16 }}>
+                Visual bracket overview · switch to Match Cards to enter results
+              </p>
+              <BracketTree
+                fixtures={fixtures} knockoutBracket={knockoutBracket}
+                players={players} fixtureConfig={fixtureConfig}
+              />
             </div>
           )}
 
-          {generatedRounds.map(roundNum=>{
+          {/* Card view rounds */}
+          {bracketView === 'cards' && generatedRounds.map(roundNum=>{
             const label       = getRoundLabel(roundNum, totalRounds)
             const legs        = getLegCount(roundNum, totalRounds, fixtureConfig)
             const rf          = fixtures.filter(f=>f.type==='knockout'&&f.roundNum===roundNum)

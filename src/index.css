@@ -232,3 +232,26 @@ input:checked + .toggle-slider:before { transform: translateX(20px); background:
   .stack-mobile { flex-direction: column !important; }
   .full-mobile  { width: 100% !important; }
 }
+
+/* ── Sidebar layout ───────────────────────────────────────────────────── */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+/* Desktop: show sidebar, offset content */
+@media (min-width: 768px) {
+  .sidebar-desktop {
+    display: block !important;
+  }
+  /* Push content right on desktop */
+  .sidebar-desktop ~ * {
+    margin-left: 200px;
+  }
+}
+
+/* Mobile: top bar layout adjustments */
+@media (min-width: 768px) {
+  /* Hide mobile top bar on desktop */
+  .mobile-topbar { display: none !important; }
+}
