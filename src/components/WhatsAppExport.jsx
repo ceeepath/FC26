@@ -224,40 +224,59 @@ function LeaderboardCard({ players, fixtures }) {
   )
 }
 
-function ResultsCard({ groups, players, fixtures, fixtureConfig }) {
-  const groupFix = fixtures.filter(f=>f.type==='group')
-  const byGroup  = groups.map(g=>({ group:g, all:groupFix.filter(f=>f.groupId===g.id) }))
-  const maxR     = Math.max(...byGroup.map(g=>g.all.length), 0)
-  const rounds   = Array.from({length:maxR},(_,i)=>i)
-  const pName    = id => players.find(p=>p.id===id)?.name??'???'
-  const played   = groupFix.filter(f=>f.played).length
+function RoundCard({ rIdx, groups, players, fixtures, fixtureConfig }) {
+  const groupFix = fixtures.filter(f => f.type === 'group')
+  const byGroup  = groups.map(g => ({ group: g, all: groupFix.filter(f => f.groupId === g.id) }))
+  const pName    = id => players.find(p => p.id === id)?.name ?? '???'
+  const roundFixtures = byGroup.map(({ group, all }) => ({ group, f: all[rIdx] ?? null })).filter(x => x.f)
+  const playedInRound = roundFixtures.filter(x => x.f.played).length
 
   return (
-    <CardWrapper title="MATCH RESULTS" subtitle={`${played} of ${groupFix.length} matches played`}>
-      {rounds.map(rIdx=>(
-        <div key={rIdx} style={{ marginBottom:16 }}>
-          <div style={{ fontFamily:'Bebas Neue,sans-serif', fontSize:14, letterSpacing:2, color:'#8a9a8a', marginBottom:6 }}>
-            ROUND {rIdx+1}
+    <CardWrapper
+      title={`ROUND ${rIdx + 1} RESULTS`}
+      subtitle={`${playedInRound} of ${roundFixtures.length} matches played`}
+    >
+      {roundFixtures.map(({ group, f }) => {
+        const leg = fixtureConfig?.group === 2 ? ` L${f.leg}` : ''
+        return (
+          <div key={f.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 0', borderBottom:'1px solid #0f1f0f' }}>
+            <span style={{ fontSize:11, color:'#8a9a8a', minWidth:72 }}>{group.name}{leg}</span>
+            <span style={{ flex:1, textAlign:'right', fontWeight:700, color:'#f0f0f0', fontSize:13 }}>{pName(f.homeId)}</span>
+            <div style={{ padding:'4px 12px', background:f.played?'#1a2e00':'#0a1a0a', border:`1px solid ${f.played?'#3a6a00':'#1a3a1a'}`, borderRadius:4, minWidth:52, textAlign:'center' }}>
+              {f.played
+                ? <span style={{ fontFamily:'Bebas Neue,sans-serif', fontSize:16, color:'#a0d060', letterSpacing:1 }}>{f.homeScore}–{f.awayScore}</span>
+                : <span style={{ fontSize:11, color:'#4a6a4a' }}>vs</span>}
+            </div>
+            <span style={{ flex:1, fontWeight:700, color:'#f0f0f0', fontSize:13 }}>{pName(f.awayId)}</span>
           </div>
-          {byGroup.map(({group,all})=>{
-            const f=all[rIdx]; if(!f)return null
-            const leg=fixtureConfig?.group===2?` L${f.leg}`:''
-            return (
-              <div key={f.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 0', borderBottom:'1px solid #0f1f0f' }}>
-                <span style={{ fontSize:11, color:'#8a9a8a', minWidth:70 }}>{group.name}{leg}</span>
-                <span style={{ flex:1, textAlign:'right', fontWeight:700, color:'#f0f0f0', fontSize:13 }}>{pName(f.homeId)}</span>
-                <div style={{ padding:'3px 10px', background:f.played?'#1a2e00':'#0a1a0a', border:`1px solid ${f.played?'#3a6a00':'#1a3a1a'}`, borderRadius:4, minWidth:48, textAlign:'center' }}>
-                  {f.played
-                    ? <span style={{ fontFamily:'Bebas Neue,sans-serif', fontSize:15, color:'#a0d060' }}>{f.homeScore}–{f.awayScore}</span>
-                    : <span style={{ fontSize:11, color:'#4a6a4a' }}>vs</span>}
-                </div>
-                <span style={{ flex:1, fontWeight:700, color:'#f0f0f0', fontSize:13 }}>{pName(f.awayId)}</span>
-              </div>
-            )
-          })}
+        )
+      })}
+    </CardWrapper>
+  )
+}
+
+function PerRoundResults({ groups, players, fixtures, fixtureConfig }) {
+  const groupFix = fixtures.filter(f => f.type === 'group')
+  const byGroup  = groups.map(g => ({ all: groupFix.filter(f => f.groupId === g.id) }))
+  const maxR     = Math.max(...byGroup.map(g => g.all.length), 0)
+  const roundRefs = Array.from({ length: maxR }, () => useRef(null))
+
+  if (maxR === 0) return <p style={{ color:'#8a9a8a', padding:16 }}>No fixtures yet.</p>
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      {Array.from({ length: maxR }, (_, rIdx) => (
+        <div key={rIdx}>
+          {/* Per-round save button */}
+          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:6 }}>
+            <ImageButton targetRef={roundRefs[rIdx]} filename={`ea26-round-${rIdx+1}`} size="small" />
+          </div>
+          <div ref={roundRefs[rIdx]}>
+            <RoundCard rIdx={rIdx} groups={groups} players={players} fixtures={fixtures} fixtureConfig={fixtureConfig} />
+          </div>
         </div>
       ))}
-    </CardWrapper>
+    </div>
   )
 }
 
@@ -326,7 +345,7 @@ function QualifiersCard({ groups, players, fixtures, qualifierConfig }) {
 
 // ── Export card wrapper ───────────────────────────────────────────────────
 
-function ExportCard({ icon, title, description, text, children, filename }) {
+function ExportCard({ icon, title, description, text, children, filename, multiImage }) {
   const [preview, setPreview] = useState(false)
   const imgRef = useRef(null)
 
@@ -347,7 +366,7 @@ function ExportCard({ icon, title, description, text, children, filename }) {
           }}>
             {preview?'Hide':'Preview'}
           </button>
-          {children && <ImageButton targetRef={imgRef} filename={filename} />}
+          {children && !multiImage && <ImageButton targetRef={imgRef} filename={filename} />}
           <CopyButton text={text} label="📋 Text" />
         </div>
       </div>
@@ -356,9 +375,14 @@ function ExportCard({ icon, title, description, text, children, filename }) {
       {preview && (
         <div style={{ padding:'16px 20px', background:'#020902' }}>
           {children ? (
-            <div ref={imgRef} style={{ display:'inline-block', minWidth:400, maxWidth:'100%' }}>
-              {children}
-            </div>
+            multiImage ? (
+              // Multi-image: render as-is (each round has its own button)
+              <div>{children}</div>
+            ) : (
+              <div ref={imgRef} style={{ display:'inline-block', minWidth:400, maxWidth:'100%' }}>
+                {children}
+              </div>
+            )
           ) : (
             <pre style={{ fontFamily:'monospace', fontSize:12, color:'var(--text-primary)', lineHeight:1.7, whiteSpace:'pre-wrap', wordBreak:'break-word', margin:0, maxHeight:320, overflowY:'auto' }}>
               {text}
@@ -394,9 +418,10 @@ export default function WhatsAppExport({
     },
     {
       icon: '⚽', title: 'MATCH RESULTS BY ROUND', filename: 'ea26-results',
-      description: 'Group stage results organised by round.',
+      description: 'One image per round — each group\'s result side by side.',
       text: exportResultsByRound(groups, players, fixtures, fixtureConfig),
-      card: <ResultsCard groups={groups} players={players} fixtures={fixtures} fixtureConfig={fixtureConfig} />,
+      card: <PerRoundResults groups={groups} players={players} fixtures={fixtures} fixtureConfig={fixtureConfig} />,
+      multiImage: true,
     },
     {
       icon: '📊', title: 'GROUP STANDINGS', filename: 'ea26-standings',
@@ -453,7 +478,7 @@ export default function WhatsAppExport({
         {exports.map(e => (
           <ExportCard key={e.title} icon={e.icon} title={e.title}
             description={e.description} text={e.text}
-            filename={e.filename}>
+            filename={e.filename} multiImage={e.multiImage}>
             {e.card}
           </ExportCard>
         ))}
