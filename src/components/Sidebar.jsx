@@ -116,66 +116,40 @@ export default function Sidebar({
           </div>
 
           <div style={{
-            padding: 14,
-            borderRadius: 18,
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))',
-            border: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            padding: '10px 12px',
+            borderRadius: 14,
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.05)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
-              <div style={{ fontSize: 10, color: '#8ca18c', letterSpacing: 1.7 }}>TOURNAMENT STATUS</div>
+            <div>
+              <div style={{ fontSize: 10, color: '#6f876f', letterSpacing: 1.6, marginBottom: 3 }}>
+                CURRENT PHASE
+              </div>
               <div style={{
-                padding: '4px 8px',
-                borderRadius: 999,
-                border: '1px solid rgba(245,197,24,0.16)',
-                background: 'rgba(245,197,24,0.08)',
-                color: 'var(--gold)',
-                fontSize: 10,
+                fontFamily: 'Bebas Neue',
+                fontSize: 18,
                 letterSpacing: 1.4,
+                color: 'var(--text-primary)',
               }}>
                 {stats?.phase ?? 'Setup'}
               </div>
             </div>
 
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 10,
-              marginBottom: 12,
+              padding: '5px 9px',
+              borderRadius: 999,
+              border: '1px solid rgba(245,197,24,0.16)',
+              background: 'rgba(245,197,24,0.08)',
+              color: 'var(--gold)',
+              fontSize: 10,
+              letterSpacing: 1.3,
+              whiteSpace: 'nowrap',
             }}>
-              {[
-                ['Players', stats?.players ?? 0],
-                ['Groups', stats?.groups ?? 0],
-                ['Played', stats?.playedFixtures ?? 0],
-                ['Locked', stats?.groupsLocked ? 'Yes' : 'No'],
-              ].map(([label, value]) => (
-                <div key={label} style={{
-                  padding: '10px 10px',
-                  borderRadius: 12,
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                }}>
-                  <div style={{ fontSize: 10, color: '#7f947f', letterSpacing: 1.2, marginBottom: 5 }}>{label}</div>
-                  <div style={{ fontFamily: 'Bebas Neue', fontSize: 22, lineHeight: 1, color: 'var(--text-primary)', letterSpacing: 1 }}>
-                    {value}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: 'grid', gap: 8 }}>
-              {progressSteps.map(step => {
-                const tab = tabMap[step.key]
-                const locked = !!tab?.locked
-                return (
-                  <div key={step.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <StageDot done={step.done} current={step.current} locked={locked} />
-                    <div style={{ fontSize: 12, color: step.current ? 'var(--text-primary)' : '#8da28d', fontWeight: step.current ? 700 : 600 }}>
-                      {step.label}
-                    </div>
-                    {locked && <span style={{ marginLeft: 'auto', fontSize: 10, color: '#537053' }}>🔒</span>}
-                  </div>
-                )
-              })}
+              {stats?.players ?? 0} players
             </div>
           </div>
         </div>
