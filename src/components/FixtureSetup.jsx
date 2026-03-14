@@ -255,6 +255,11 @@ export default function FixtureSetup({
     setEditingId(null)
   }
 
+  const effectiveGroups = useMemo(() => isLeague
+    ? [{ id: 'league', name: 'League', colorIdx: 0, playerIds: players.map(p => p.id) }]
+    : groups
+  , [isLeague, players, groups])
+
   function generateGroupFixtures() {
     const resultsEntered = fixtures.filter(f => f.played).length
     const label = isLeague ? 'league' : 'group stage'
@@ -325,11 +330,6 @@ export default function FixtureSetup({
     if (!window.confirm('Unlock fixtures? This will allow regeneration again.')) return
     setFixturesLocked(false)
   }
-
-  // In league mode, treat all players as a single "group"
-  const effectiveGroups = isLeague
-    ? [{ id: 'league', name: 'League', colorIdx: 0, playerIds: players.map(p => p.id) }]
-    : groups
 
   const fixturesByGroup = useMemo(() => effectiveGroups.map(group => ({
     group,
