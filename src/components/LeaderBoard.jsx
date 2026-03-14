@@ -143,7 +143,7 @@ function PodiumCard({ player, index }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 10 }}>
         {[
           ['MP', player.MP, 'var(--text-primary)'],
           ['GF', player.GF, palette.text],
