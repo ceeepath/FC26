@@ -354,6 +354,10 @@ export default function KnockoutBracket({
     if (!id || id === 'BYE') return 'BYE'
     return players.find(p => p.id === id)?.name ?? '???'
   }
+  function playerGameId(id) {
+    if (!id || id === 'BYE') return ''
+    return players.find(p => p.id === id)?.gameId ?? ''
+  }
 
   function handleSeedClick(idx) {
     if (!isAdmin) return
