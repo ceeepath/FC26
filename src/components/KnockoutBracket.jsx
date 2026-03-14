@@ -226,16 +226,70 @@ function calcStandings(group, players, fixtures) {
 
 function getQualifiedPlayers(groups, players, fixtures, qualifierConfig) {
   const allData = groups.map(group => ({
+    groupId: group.id,
+    groupName: group.name,
     rows: calcStandings(group, players, fixtures),
     qualifiers: qualifierConfig?.perGroup?.[group.id] ?? 2,
   }))
   const direct = []
-  allData.forEach(({ rows, qualifiers }) => rows.slice(0, qualifiers).forEach(r => direct.push(r)))
+  allData.forEach(({ groupId, groupName, rows, qualifiers }) =>
+    rows.slice(0, qualifiers).forEach(r => direct.push({ ...r, groupId, groupName }))
+  )
   const loserPool = []
-  allData.forEach(({ rows, qualifiers }) => rows.slice(qualifiers).forEach(r => loserPool.push(r)))
+  allData.forEach(({ groupId, groupName, rows, qualifiers }) =>
+    rows.slice(qualifiers).forEach(r => loserPool.push({ ...r, groupId, groupName }))
+  )
   loserPool.sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || a.name.localeCompare(b.name))
   const wildcards = loserPool.slice(0, qualifierConfig?.bestLosers ?? 0)
   return [...direct, ...wildcards]
+}
+
+// ── Anti-clash seeding ────────────────────────────────────────────────────────
+// Spreads players so no two from the same group meet before the semis.
+// Algorithm: fill bracket slots alternating between top and bottom half,
+// rotating through groups so same-group players land far apart.
+function antiClashSeed(qualified) {
+  const n = qualified.length
+  if (n < 2) return qualified.map(q => q.id)
+
+  // Pad to next power of 2
+  const size = Math.pow(2, Math.ceil(Math.log2(n)))
+  const slots = Array(size).fill(null)
+
+  // Group players by their group
+  const byGroup = {}
+  qualified.forEach(q => {
+    if (!byGroup[q.groupId]) byGroup[q.groupId] = []
+    byGroup[q.groupId].push(q)
+  })
+
+  // Build interleaved pool: rotate through groups taking one at a time
+  // This ensures same-group players are maximally spread
+  const groups = Object.values(byGroup)
+  const pool = []
+  let remaining = groups.map(g => [...g])
+  while (remaining.some(g => g.length > 0)) {
+    remaining.forEach(g => { if (g.length > 0) pool.push(g.shift()) })
+  }
+
+  // Place into bracket using "snake" pattern:
+  // Fill top half slots forward, bottom half slots backward
+  // This puts pool[0] vs pool[n-1], pool[1] vs pool[n-2] etc.
+  // Guaranteeing top seeds face lower seeds and groups are split
+  const half = size / 2
+  const topSlots = []
+  const botSlots = []
+  for (let i = 0; i < half; i++) topSlots.push(i)
+  for (let i = size - 1; i >= half; i--) botSlots.push(i)
+
+  // Interleave: seed 1 → top[0], seed 2 → bot[0], seed 3 → top[1], seed 4 → bot[1]...
+  pool.forEach((player, i) => {
+    if (i % 2 === 0) slots[topSlots[Math.floor(i / 2)]] = player.id
+    else slots[botSlots[Math.floor(i / 2)]] = player.id
+  })
+
+  // Return non-null slots (BYEs will be handled by the bracket generator)
+  return slots.filter(s => s !== null)
 }
 
 function getRoundLabel(roundNum, totalRounds) {
@@ -354,10 +408,6 @@ export default function KnockoutBracket({
     if (!id || id === 'BYE') return 'BYE'
     return players.find(p => p.id === id)?.name ?? '???'
   }
-  function playerGameId(id) {
-    if (!id || id === 'BYE') return ''
-    return players.find(p => p.id === id)?.gameId ?? ''
-  }
 
   function handleSeedClick(idx) {
     if (!isAdmin) return
@@ -377,6 +427,24 @@ export default function KnockoutBracket({
     setKnockoutBracket(prev => ({ ...prev, seeding: qualified.map(q => q.id) }))
     setSelectedSeedIdx(null)
   }
+
+  function applyAntiClash() {
+    const arranged = antiClashSeed(qualified)
+    setKnockoutBracket(prev => ({ ...prev, seeding: arranged }))
+    setSelectedSeedIdx(null)
+  }
+
+  // Build a map of playerId → groupId for clash detection
+  const playerGroupMap = {}
+  qualified.forEach(q => { playerGroupMap[q.id] = q.groupId })
+
+  // Check for Round 1 clashes (same group in same pair)
+  const clashCount = previewPairs.filter(pair =>
+    pair.p2 !== 'BYE' &&
+    playerGroupMap[pair.p1] &&
+    playerGroupMap[pair.p2] &&
+    playerGroupMap[pair.p1] === playerGroupMap[pair.p2]
+  ).length
 
   const previewPairs = (() => {
     const padded = seeding.length % 2 === 1 ? [...seeding, 'BYE'] : [...seeding]
@@ -717,7 +785,17 @@ export default function KnockoutBracket({
                     : 'Tap two seed slots to swap them. Round 1 follows the visible order: 1 vs 2, 3 vs 4, and so on.'}
                 </p>
               </div>
-              <button className="btn-ghost" style={{ fontSize: 12 }} onClick={resetSeeding}>↺ Reset Order</button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  className="btn-gold"
+                  style={{ fontSize: 12 }}
+                  onClick={applyAntiClash}
+                  title="Automatically arrange seeds so same-group players can't meet before the semis"
+                >
+                  ⚡ Anti-Clash Draw
+                </button>
+                <button className="btn-ghost" style={{ fontSize: 12 }} onClick={resetSeeding}>↺ Reset</button>
+              </div>
             </div>
 
             {qualified.length < 2 ? (
@@ -754,10 +832,23 @@ export default function KnockoutBracket({
                 </div>
 
                 <div style={{ padding: 14, borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--green-border)' }}>
-                  <p style={{ fontFamily: 'Bebas Neue', fontSize: 12, letterSpacing: 2, color: 'var(--text-muted)', marginBottom: 10 }}>ROUND 1 PREVIEW</p>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                    <p style={{ fontFamily: 'Bebas Neue', fontSize: 12, letterSpacing: 2, color: 'var(--text-muted)' }}>ROUND 1 PREVIEW</p>
+                    {clashCount > 0 ? (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#f0a060', background: 'rgba(240,160,96,0.10)', border: '1px solid rgba(240,160,96,0.28)', padding: '3px 9px', borderRadius: 999 }}>
+                        ⚠️ {clashCount} same-group clash{clashCount !== 1 ? 'es' : ''}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--card-green)', background: 'rgba(93,143,106,0.10)', border: '1px solid rgba(93,143,106,0.22)', padding: '3px 9px', borderRadius: 999 }}>
+                        ✓ No group clashes
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {previewPairs.map((pair, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'rgba(0,0,0,0.14)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)' }}>
+                    {previewPairs.map((pair, idx) => {
+                      const isClash = pair.p2 !== 'BYE' && playerGroupMap[pair.p1] && playerGroupMap[pair.p2] && playerGroupMap[pair.p1] === playerGroupMap[pair.p2]
+                      return (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: isClash ? 'rgba(240,160,96,0.06)' : 'rgba(0,0,0,0.14)', borderRadius: 12, border: `1px solid ${isClash ? 'rgba(240,160,96,0.28)' : 'rgba(255,255,255,0.04)'}` }}>
                         <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, color: 'var(--text-muted)', minWidth: 24 }}>{idx + 1}</span>
                         <div style={{ flex: 1, textAlign: 'right' }}>
                           <div style={{ fontWeight: 700, fontSize: 14 }}>{playerName(pair.p1)}</div>
@@ -769,7 +860,7 @@ export default function KnockoutBracket({
                           {pair.p2 !== 'BYE' && playerGameId(pair.p2) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{playerGameId(pair.p2)}</div>}
                         </div>
                       </div>
-                    ))}
+                    )})}  
                   </div>
                 </div>
               </>
