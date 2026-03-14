@@ -374,7 +374,7 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
           }, 400)
           drawTimeouts.current.push(endT)
         }
-      }, i * 500)
+      }, i * 1000)
       drawTimeouts.current.push(t)
     })
   }
