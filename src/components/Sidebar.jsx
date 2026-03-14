@@ -46,6 +46,7 @@ export default function Sidebar({
   mobileOpen, onMobileClose,
   tabs,
   stats,
+  isMobile,
 }) {
   const tabMap = {}
   tabs.forEach(t => { tabMap[t.id] = t })
@@ -83,18 +84,23 @@ export default function Sidebar({
           borderBottom: '1px solid var(--border-soft)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <div style={{
-              width: 44,
-              height: 44,
-              borderRadius: 16,
-              background: 'linear-gradient(135deg, rgba(212,175,55,0.14), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(212,175,55,0.18)',
-              display: 'grid',
-              placeItems: 'center',
-              fontSize: 20,
-              boxShadow: '0 0 18px rgba(212,175,55,0.06)',
-              flexShrink: 0,
-            }}>
+            <div
+              onClick={isMobile ? onMobileClose : undefined}
+              title={isMobile ? 'Close menu' : undefined}
+              style={{
+                width: 44, height: 44, borderRadius: 16,
+                background: 'linear-gradient(135deg, rgba(212,175,55,0.14), rgba(255,255,255,0.02))',
+                border: '1px solid rgba(212,175,55,0.18)',
+                display: 'grid', placeItems: 'center',
+                fontSize: 20,
+                boxShadow: '0 0 18px rgba(212,175,55,0.06)',
+                flexShrink: 0,
+                cursor: isMobile ? 'pointer' : 'default',
+                transition: 'transform 0.15s, background 0.15s',
+              }}
+              onMouseEnter={e => { if (isMobile) e.currentTarget.style.background = 'rgba(212,175,55,0.22)' }}
+              onMouseLeave={e => { if (isMobile) e.currentTarget.style.background = 'linear-gradient(135deg, rgba(212,175,55,0.14), rgba(255,255,255,0.02))' }}
+            >
               ⚽
             </div>
 
@@ -346,44 +352,35 @@ export default function Sidebar({
 
   return (
     <>
-      <div
-        style={{
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 276,
-          zIndex: 70,
-          display: 'block',
-        }}
-      >
-        {sidebarContent}
-      </div>
+      {/* Desktop fixed sidebar — hidden on mobile */}
+      {!isMobile && (
+        <div style={{
+          position: 'fixed', left: 0, top: 0, bottom: 0,
+          width: 276, zIndex: 70,
+        }}>
+          {sidebarContent}
+        </div>
+      )}
 
-      {mobileOpen && (
+      {/* Mobile drawer — only when open */}
+      {isMobile && mobileOpen && (
         <>
+          {/* Backdrop */}
           <div
             onClick={onMobileClose}
             style={{
-              position: 'fixed',
-              inset: 0,
+              position: 'fixed', inset: 0,
               background: 'rgba(0,0,0,0.62)',
-              zIndex: 199,
-              backdropFilter: 'blur(6px)',
+              zIndex: 199, backdropFilter: 'blur(6px)',
             }}
           />
-          <div
-            style={{
-              position: 'fixed',
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 286,
-              maxWidth: '86vw',
-              zIndex: 200,
-              animation: 'slideInLeft 0.25s ease',
-            }}
-          >
+          {/* Drawer */}
+          <div style={{
+            position: 'fixed', left: 0, top: 0, bottom: 0,
+            width: 286, maxWidth: '86vw',
+            zIndex: 200,
+            animation: 'slideInLeft 0.25s ease',
+          }}>
             {sidebarContent}
           </div>
         </>

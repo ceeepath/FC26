@@ -4,7 +4,7 @@ import GroupSetup from './components/GroupSetup'
 import FixtureSetup from './components/FixtureSetup'
 import GroupStandings from './components/GroupStandings'
 import KnockoutBracket from './components/KnockoutBracket'
-import Leaderboard from './components/LeaderBoard'
+import Leaderboard from './components/Leaderboard'
 import WhatsAppExport from './components/WhatsAppExport'
 import Dashboard from './components/Dashboard'
 import Sidebar from './components/Sidebar'
@@ -229,25 +229,14 @@ export default function App() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-main)' }}>
 
-      {/* Sidebar */}
-      {!isMobile && (
-        <Sidebar
-          tabs={TABS} activeTab={activeTab}
-          onTabClick={handleTabClick} isAdmin={isAdmin}
-          onAdminClick={() => setShowLogin(true)} onLogout={handleLogout}
-          mobileOpen={false} onMobileClose={() => {}}
-          stats={sidebarStats}
-        />
-      )}
-      {isMobile && (
-        <Sidebar
-          tabs={TABS} activeTab={activeTab}
-          onTabClick={handleTabClick} isAdmin={isAdmin}
-          onAdminClick={() => setShowLogin(true)} onLogout={handleLogout}
-          mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)}
-          stats={sidebarStats}
-        />
-      )}
+      {/* Single Sidebar — handles desktop/mobile internally */}
+      <Sidebar
+        tabs={TABS} activeTab={activeTab}
+        onTabClick={handleTabClick} isAdmin={isAdmin}
+        onAdminClick={() => setShowLogin(true)} onLogout={handleLogout}
+        mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)}
+        stats={sidebarStats} isMobile={isMobile}
+      />
 
       {/* Main */}
       <div style={{
