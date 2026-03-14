@@ -10,27 +10,34 @@ const NAV_ITEMS = [
   { id: 'settings',  label: 'Settings',    icon: '⚙️', adminOnly: true, hint: 'Admin controls' },
 ]
 
-function StageDot({ done, current, locked }) {
-  const bg = current
-    ? 'var(--gold)'
-    : done
-      ? '#68d168'
-      : locked
-        ? 'rgba(255,255,255,0.10)'
-        : 'rgba(255,255,255,0.18)'
-
-  return (
-    <div
-      style={{
-        width: 10,
-        height: 10,
-        borderRadius: '50%',
-        background: bg,
-        boxShadow: current ? '0 0 14px rgba(245,197,24,0.55)' : done ? '0 0 10px rgba(104,209,104,0.22)' : 'none',
-        flexShrink: 0,
-      }}
-    />
-  )
+function tone(kind = 'neutral') {
+  const map = {
+    gold: {
+      color: 'var(--gold)',
+      bg: 'rgba(212,175,55,0.08)',
+      border: 'rgba(212,175,55,0.18)',
+      glow: 'rgba(212,175,55,0.12)',
+    },
+    green: {
+      color: 'var(--card-green)',
+      bg: 'rgba(93,143,106,0.12)',
+      border: 'rgba(93,143,106,0.20)',
+      glow: 'rgba(93,143,106,0.12)',
+    },
+    danger: {
+      color: 'var(--danger)',
+      bg: 'rgba(179,92,92,0.08)',
+      border: 'rgba(179,92,92,0.18)',
+      glow: 'rgba(179,92,92,0.10)',
+    },
+    neutral: {
+      color: 'var(--text-secondary)',
+      bg: 'rgba(255,255,255,0.03)',
+      border: 'var(--border-soft)',
+      glow: 'transparent',
+    },
+  }
+  return map[kind] ?? map.neutral
 }
 
 export default function Sidebar({
@@ -50,20 +57,15 @@ export default function Sidebar({
     onMobileClose?.()
   }
 
-  const progressSteps = [
-    { key: 'players',  label: 'Players',   done: (stats?.players ?? 0) > 0, current: activeTab === 'players' },
-    { key: 'groups',   label: 'Groups',    done: !!stats?.groupsLocked, current: activeTab === 'groups' },
-    { key: 'fixtures', label: 'Fixtures',  done: !!stats?.fixturesGenerated, current: activeTab === 'fixtures' },
-    { key: 'knockout', label: 'Knockout',  done: !!stats?.knockoutStarted, current: activeTab === 'knockout' },
-  ]
+  const phaseTone = activeTab === 'knockout' ? tone('gold') : tone('neutral')
 
   const sidebarContent = (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: 'linear-gradient(180deg, rgba(7,18,7,0.98) 0%, rgba(3,9,3,1) 100%)',
-      borderRight: '1px solid rgba(245,197,24,0.10)',
+      background: 'linear-gradient(180deg, rgba(10,19,15,0.98) 0%, rgba(7,17,12,1) 100%)',
+      borderRight: '1px solid var(--border-soft)',
       boxShadow: '24px 0 48px rgba(0,0,0,0.18)',
       position: 'relative',
       overflow: 'hidden',
@@ -71,26 +73,26 @@ export default function Sidebar({
       <div style={{
         position: 'absolute',
         inset: 0,
-        background: 'radial-gradient(circle at top left, rgba(245,197,24,0.08), transparent 26%), radial-gradient(circle at bottom center, rgba(76,175,80,0.08), transparent 22%)',
+        background: 'radial-gradient(circle at top left, var(--gold-glow), transparent 28%), radial-gradient(circle at bottom center, rgba(93,143,106,0.08), transparent 24%)',
         pointerEvents: 'none',
       }} />
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{
           padding: '22px 18px 14px',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: '1px solid var(--border-soft)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <div style={{
               width: 44,
               height: 44,
               borderRadius: 16,
-              background: 'linear-gradient(135deg, rgba(245,197,24,0.18), rgba(245,197,24,0.04))',
-              border: '1px solid rgba(245,197,24,0.22)',
+              background: 'linear-gradient(135deg, rgba(212,175,55,0.14), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(212,175,55,0.18)',
               display: 'grid',
               placeItems: 'center',
               fontSize: 20,
-              boxShadow: '0 0 18px rgba(245,197,24,0.08)',
+              boxShadow: '0 0 18px rgba(212,175,55,0.06)',
               flexShrink: 0,
             }}>
               ⚽
@@ -98,10 +100,11 @@ export default function Sidebar({
 
             <div style={{ minWidth: 0 }}>
               <div style={{
-                fontFamily: 'Bebas Neue',
-                fontSize: 22,
+                fontFamily: 'Barlow Condensed',
+                fontWeight: 700,
+                fontSize: 24,
                 lineHeight: 0.95,
-                letterSpacing: 3,
+                letterSpacing: 2.6,
                 background: 'linear-gradient(135deg, var(--gold-dim), var(--gold))',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -109,7 +112,7 @@ export default function Sidebar({
               }}>
                 EA26
               </div>
-              <div style={{ fontSize: 10, color: '#6f876f', letterSpacing: 2.2, marginTop: 2 }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 2.2, marginTop: 2 }}>
                 TNC · FIFA PS5
               </div>
             </div>
@@ -123,16 +126,17 @@ export default function Sidebar({
             padding: '10px 12px',
             borderRadius: 14,
             background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.05)',
+            border: '1px solid var(--border-soft)',
           }}>
             <div>
-              <div style={{ fontSize: 10, color: '#6f876f', letterSpacing: 1.6, marginBottom: 3 }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1.6, marginBottom: 3 }}>
                 CURRENT PHASE
               </div>
               <div style={{
-                fontFamily: 'Bebas Neue',
+                fontFamily: 'Barlow Condensed',
+                fontWeight: 700,
                 fontSize: 18,
-                letterSpacing: 1.4,
+                letterSpacing: 1.2,
                 color: 'var(--text-primary)',
               }}>
                 {stats?.phase ?? 'Setup'}
@@ -142,9 +146,9 @@ export default function Sidebar({
             <div style={{
               padding: '5px 9px',
               borderRadius: 999,
-              border: '1px solid rgba(245,197,24,0.16)',
-              background: 'rgba(245,197,24,0.08)',
-              color: 'var(--gold)',
+              border: `1px solid ${phaseTone.border}`,
+              background: phaseTone.bg,
+              color: phaseTone.color,
               fontSize: 10,
               letterSpacing: 1.3,
               whiteSpace: 'nowrap',
@@ -155,7 +159,7 @@ export default function Sidebar({
         </div>
 
         <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
-          <div style={{ fontSize: 10, color: '#6f876f', letterSpacing: 1.8, padding: '0 10px 8px' }}>NAVIGATION</div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1.8, padding: '0 10px 8px' }}>NAVIGATION</div>
 
           {NAV_ITEMS.map(item => {
             const tab = tabMap[item.id]
@@ -180,9 +184,9 @@ export default function Sidebar({
                   padding: '12px 12px',
                   borderRadius: 16,
                   marginBottom: 6,
-                  border: isActive ? '1px solid rgba(245,197,24,0.22)' : '1px solid transparent',
+                  border: isActive ? '1px solid rgba(212,175,55,0.20)' : '1px solid transparent',
                   background: isActive
-                    ? 'linear-gradient(90deg, rgba(245,197,24,0.12), rgba(255,255,255,0.03))'
+                    ? 'linear-gradient(90deg, rgba(212,175,55,0.08), rgba(255,255,255,0.03))'
                     : 'transparent',
                   cursor: disabled ? 'not-allowed' : 'pointer',
                   opacity: disabled ? 0.38 : 1,
@@ -190,7 +194,7 @@ export default function Sidebar({
                   textAlign: 'left',
                 }}
                 onMouseEnter={e => {
-                  if (!disabled && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.035)'
+                  if (!disabled && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
                 }}
                 onMouseLeave={e => {
                   if (!isActive) e.currentTarget.style.background = 'transparent'
@@ -202,8 +206,8 @@ export default function Sidebar({
                   borderRadius: 12,
                   display: 'grid',
                   placeItems: 'center',
-                  background: isActive ? 'rgba(245,197,24,0.12)' : 'rgba(255,255,255,0.035)',
-                  border: `1px solid ${isActive ? 'rgba(245,197,24,0.18)' : 'rgba(255,255,255,0.05)'}`,
+                  background: isActive ? 'rgba(212,175,55,0.10)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${isActive ? 'rgba(212,175,55,0.18)' : 'var(--border-soft)'}`,
                   flexShrink: 0,
                   fontSize: 16,
                 }}>
@@ -212,7 +216,6 @@ export default function Sidebar({
 
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{
-                    fontFamily: 'Barlow',
                     fontWeight: 700,
                     fontSize: 13,
                     color: isActive ? 'var(--gold)' : 'var(--text-primary)',
@@ -223,7 +226,7 @@ export default function Sidebar({
                   </div>
                   <div style={{
                     fontSize: 11,
-                    color: isActive ? '#c4b584' : '#6f876f',
+                    color: isActive ? 'var(--text-secondary)' : 'var(--text-muted)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -238,26 +241,26 @@ export default function Sidebar({
                     height: 7,
                     borderRadius: '50%',
                     background: 'var(--gold)',
-                    boxShadow: '0 0 10px rgba(245,197,24,0.55)',
+                    boxShadow: '0 0 8px rgba(212,175,55,0.35)',
                     flexShrink: 0,
                   }} />
                 )}
 
                 {!isActive && (isLocked || isAdminTab) && (
-                  <span style={{ fontSize: 11, color: '#466546', flexShrink: 0 }}>🔒</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>🔒</span>
                 )}
               </button>
             )
           })}
         </nav>
 
-        <div style={{ padding: '12px 12px 16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ padding: '12px 12px 16px', borderTop: '1px solid var(--border-soft)' }}>
           {isAdmin ? (
             <div style={{
               padding: 14,
               borderRadius: 16,
-              background: 'linear-gradient(180deg, rgba(76,175,80,0.10), rgba(76,175,80,0.04))',
-              border: '1px solid rgba(76,175,80,0.18)',
+              background: 'linear-gradient(180deg, rgba(93,143,106,0.10), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(93,143,106,0.18)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <div style={{
@@ -266,15 +269,15 @@ export default function Sidebar({
                   borderRadius: 12,
                   display: 'grid',
                   placeItems: 'center',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid var(--border-soft)',
                   fontSize: 16,
                 }}>
                   🛡
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: '#7fd37f', letterSpacing: 1.5 }}>ADMIN MODE</div>
-                  <div style={{ fontSize: 12, color: '#bce6bc', fontWeight: 700 }}>Unlocked controls are active</div>
+                  <div style={{ fontSize: 11, color: 'var(--card-green)', letterSpacing: 1.5 }}>ADMIN MODE</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700 }}>Unlocked controls are active</div>
                 </div>
               </div>
 
@@ -285,20 +288,19 @@ export default function Sidebar({
                   padding: '10px 12px',
                   borderRadius: 12,
                   background: 'transparent',
-                  border: '1px solid rgba(224,82,82,0.20)',
-                  color: '#d58787',
+                  border: '1px solid rgba(179,92,92,0.20)',
+                  color: 'var(--danger)',
                   fontSize: 12,
-                  fontFamily: 'Barlow',
                   fontWeight: 700,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'rgba(224,82,82,0.45)'
-                  e.currentTarget.style.background = 'rgba(224,82,82,0.05)'
+                  e.currentTarget.style.borderColor = 'rgba(179,92,92,0.34)'
+                  e.currentTarget.style.background = 'rgba(179,92,92,0.05)'
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = 'rgba(224,82,82,0.20)'
+                  e.currentTarget.style.borderColor = 'rgba(179,92,92,0.20)'
                   e.currentTarget.style.background = 'transparent'
                 }}
               >
@@ -309,11 +311,11 @@ export default function Sidebar({
             <div style={{
               padding: 14,
               borderRadius: 16,
-              background: 'linear-gradient(180deg, rgba(245,197,24,0.06), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(245,197,24,0.12)',
+              background: 'linear-gradient(180deg, rgba(212,175,55,0.05), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(212,175,55,0.14)',
             }}>
-              <div style={{ fontSize: 11, color: '#d2bc75', letterSpacing: 1.5, marginBottom: 6 }}>ADMIN ACCESS</div>
-              <div style={{ fontSize: 12, color: '#9aae9a', marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: 'var(--gold)', letterSpacing: 1.5, marginBottom: 6 }}>ADMIN ACCESS</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
                 Login to unlock settings and protected tournament actions.
               </div>
 
@@ -323,11 +325,10 @@ export default function Sidebar({
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: 12,
-                  background: 'rgba(245,197,24,0.08)',
-                  border: '1px solid rgba(245,197,24,0.18)',
+                  background: 'rgba(212,175,55,0.08)',
+                  border: '1px solid rgba(212,175,55,0.18)',
                   color: 'var(--gold)',
                   fontSize: 12,
-                  fontFamily: 'Barlow',
                   fontWeight: 700,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',

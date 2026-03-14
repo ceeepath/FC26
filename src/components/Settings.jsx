@@ -31,13 +31,14 @@ export default function Settings({ settings, setSettings, onLogout }) {
     setSettings(s => ({ ...s, openResultEntry: !s.openResultEntry }))
   }
 
+  const messageColor = (msg) => msg.startsWith('✅') ? 'var(--card-green)' : 'var(--danger)'
+
   return (
     <div className="fade-up">
-      <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, color: 'var(--gold)', letterSpacing: 2, marginBottom: 24 }}>
+      <h2 style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 34, color: 'var(--gold)', letterSpacing: 1.6, marginBottom: 24 }}>
         SETTINGS
       </h2>
 
-      {/* Min Players */}
       <div className="card" style={{ padding: 24, marginBottom: 16 }}>
         <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Minimum Players to Start</h3>
         <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 14 }}>
@@ -51,59 +52,80 @@ export default function Settings({ settings, setSettings, onLogout }) {
             max="128"
             value={minInput}
             onChange={e => { setMinInput(e.target.value); setMinMsg('') }}
-            style={{ width: 100, color: '#111111', background: '#ffffff', border: '1px solid var(--gold)', borderRadius: 8, padding: '8px 10px' }}
+            style={{ width: 100 }}
           />
           <button type="submit" className="btn-gold">Save</button>
         </form>
         {minMsg && (
-          <p style={{ fontSize: 13, marginTop: 10, color: minMsg.startsWith('✅') ? '#4caf50' : 'var(--danger)' }}>
+          <p style={{ fontSize: 13, marginTop: 10, color: messageColor(minMsg) }}>
             {minMsg}
           </p>
         )}
       </div>
 
-      {/* Result Entry Access */}
       <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div>
-            <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Open Result Entry</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-              {settings.openResultEntry
-                ? '🔓 Anyone with the link can enter match results.'
-                : '🔒 Only admins can enter match results.'}
-            </p>
-          </div>
-          <label className="toggle">
-            <input type="checkbox" checked={settings.openResultEntry} onChange={toggleOpenEntry} />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      {/* Change Password */}
-      <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-        <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Change Admin Password</h3>
-        <form onSubmit={changePassword}>
-          <input type="password" placeholder="New password" value={newPass}
-            onChange={e => { setNewPass(e.target.value); setPassMsg('') }} style={{ marginBottom: 10 }} />
-          <input type="password" placeholder="Confirm new password" value={confirmPass}
-            onChange={e => { setConfirmPass(e.target.value); setPassMsg('') }} style={{ marginBottom: 12 }} />
-          {passMsg && (
-            <p style={{ fontSize: 13, marginBottom: 12, color: passMsg.startsWith('✅') ? '#4caf50' : 'var(--danger)' }}>
-              {passMsg}
-            </p>
-          )}
-          <button type="submit" className="btn-gold">Update Password</button>
-        </form>
-      </div>
-
-      {/* Logout */}
-      <div className="card" style={{ padding: 24 }}>
-        <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Session</h3>
+        <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Result Entry Permissions</h3>
         <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
-          You are currently logged in as admin. Logging out will restrict access to admin-only features.
+          When enabled, anyone can enter scores from the group. When disabled, only admins can submit results.
         </p>
-        <button className="btn-danger" onClick={onLogout}>🔒 Logout</button>
+
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: 14, borderRadius: 14,
+          border: '1px solid var(--border-soft)',
+          background: 'rgba(255,255,255,0.02)',
+          cursor: 'pointer',
+        }}>
+          <div className="toggle">
+            <input type="checkbox" checked={settings.openResultEntry} onChange={toggleOpenEntry} />
+            <span className="toggle-slider" />
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Open Result Entry</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {settings.openResultEntry ? 'Enabled for all users' : 'Restricted to admins'}
+            </div>
+          </div>
+        </label>
+      </div>
+
+      <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+        <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Change Admin Password</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 14 }}>
+          Use a memorable password so only the organizers can change tournament settings.
+        </p>
+
+        <form onSubmit={changePassword} style={{ display: 'grid', gap: 12, maxWidth: 420 }}>
+          <input
+            type="password"
+            placeholder="New password"
+            value={newPass}
+            onChange={e => { setNewPass(e.target.value); setPassMsg('') }}
+          />
+          <input
+            type="password"
+            placeholder="Confirm password"
+            value={confirmPass}
+            onChange={e => { setConfirmPass(e.target.value); setPassMsg('') }}
+          />
+          <div>
+            <button type="submit" className="btn-gold">Update Password</button>
+          </div>
+        </form>
+
+        {passMsg && (
+          <p style={{ fontSize: 13, marginTop: 10, color: messageColor(passMsg) }}>
+            {passMsg}
+          </p>
+        )}
+      </div>
+
+      <div className="card" style={{ padding: 24 }}>
+        <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Admin Session</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 14 }}>
+          End the current admin session on this device.
+        </p>
+        <button className="btn-danger" onClick={onLogout}>Logout</button>
       </div>
     </div>
   )

@@ -26,11 +26,10 @@ function getPhaseLabel({ players, groupsLocked, fixturesGenerated, knockoutBrack
 
 function TopBadge({ children, tone = 'gold' }) {
   const tones = {
-    gold: { color: 'var(--gold)', bg: 'rgba(245,197,24,0.08)', border: 'rgba(245,197,24,0.18)' },
-    green: { color: '#83d883', bg: 'rgba(76,175,80,0.10)', border: 'rgba(76,175,80,0.18)' },
-    blue: { color: '#8ec9ff', bg: 'rgba(108,168,255,0.10)', border: 'rgba(108,168,255,0.18)' },
+    gold: { color: 'var(--gold)', bg: 'rgba(212,175,55,0.08)', border: 'rgba(212,175,55,0.18)' },
+    green: { color: 'var(--card-green)', bg: 'rgba(93,143,106,0.12)', border: 'rgba(93,143,106,0.18)' },
+    blue: { color: 'var(--card-blue)', bg: 'rgba(109,140,166,0.12)', border: 'rgba(109,140,166,0.18)' },
   }
-
   const palette = tones[tone] ?? tones.gold
 
   return (
@@ -136,7 +135,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--green-deep)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-main)' }}>
       {!isMobile && (
         <Sidebar
           tabs={TABS}
@@ -180,8 +179,8 @@ export default function App() {
             top: 0,
             zIndex: 60,
             backdropFilter: 'blur(12px)',
-            background: 'linear-gradient(180deg, rgba(4,12,4,0.88), rgba(4,12,4,0.72))',
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            background: 'linear-gradient(180deg, rgba(7,17,12,0.88), rgba(7,17,12,0.74))',
+            borderBottom: '1px solid var(--border-soft)',
           }}
         >
           <div
@@ -204,7 +203,7 @@ export default function App() {
                     width: 40,
                     height: 40,
                     borderRadius: 12,
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    border: '1px solid var(--border-soft)',
                     background: 'rgba(255,255,255,0.03)',
                     color: 'var(--text-primary)',
                     fontSize: 18,
@@ -220,10 +219,11 @@ export default function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
                   <div
                     style={{
-                      fontFamily: 'Bebas Neue',
+                      fontFamily: 'Barlow Condensed',
+                      fontWeight: 700,
                       fontSize: isMobile ? 24 : 30,
                       lineHeight: 0.95,
-                      letterSpacing: 2,
+                      letterSpacing: 1.6,
                       color: 'var(--gold)',
                     }}
                   >
@@ -258,11 +258,10 @@ export default function App() {
                   style={{
                     padding: '10px 14px',
                     borderRadius: 12,
-                    background: 'rgba(245,197,24,0.08)',
-                    border: '1px solid rgba(245,197,24,0.18)',
+                    background: 'rgba(212,175,55,0.08)',
+                    border: '1px solid rgba(212,175,55,0.18)',
                     color: 'var(--gold)',
                     fontSize: 12,
-                    fontFamily: 'Barlow',
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}
@@ -275,11 +274,10 @@ export default function App() {
                   style={{
                     padding: '10px 14px',
                     borderRadius: 12,
-                    background: 'rgba(224,82,82,0.08)',
-                    border: '1px solid rgba(224,82,82,0.18)',
-                    color: '#e98d8d',
+                    background: 'rgba(179,92,92,0.08)',
+                    border: '1px solid rgba(179,92,92,0.18)',
+                    color: 'var(--danger)',
                     fontSize: 12,
-                    fontFamily: 'Barlow',
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}
@@ -391,8 +389,8 @@ export default function App() {
 
         <footer
           style={{
-            borderTop: '1px solid rgba(255,255,255,0.05)',
-            background: 'linear-gradient(180deg, rgba(5,14,5,0.9), rgba(3,9,3,0.95))',
+            borderTop: '1px solid var(--border-soft)',
+            background: 'linear-gradient(180deg, rgba(10,19,15,0.92), rgba(7,17,12,0.96))',
           }}
         >
           <div
@@ -405,12 +403,12 @@ export default function App() {
               justifyContent: 'space-between',
               gap: 12,
               flexWrap: 'wrap',
-              color: '#5f785f',
+              color: 'var(--text-muted)',
               fontSize: 11,
-              letterSpacing: 1.6,
+              letterSpacing: 1.4,
             }}
           >
-            <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, letterSpacing: 2.2 }}>
+            <span style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 14, letterSpacing: 2 }}>
               EA26 TOURNAMENT MANAGER
             </span>
             <span>TNC · FIFA PS5 · Local-first tournament app</span>
