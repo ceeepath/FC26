@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const GROUP_COLORS = [
   { border: '#c9960f', bg: '#1a1200', label: 'var(--gold)', glow: 'rgba(201, 150, 15, 0.22)' },
@@ -90,7 +90,7 @@ function PlayerChip({ checked, name, onToggle, disabled = false }) {
   )
 }
 
-function GroupCard({ group, players, groupsLocked, isAdmin, onRemoveGroup, onRemovePlayer }) {
+function GroupCard({ group, players, groupsLocked, isAdmin, onRemoveGroup, onRemovePlayer, onDraw, isDrawing, unassignedCount }) {
   const color = GROUP_COLORS[group.colorIdx % GROUP_COLORS.length]
   const groupPlayers = group.playerIds.map(id => players.find(p => p.id === id)).filter(Boolean)
 
@@ -126,9 +126,28 @@ function GroupCard({ group, players, groupsLocked, isAdmin, onRemoveGroup, onRem
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 10, height: 10, borderRadius: '50%', background: color.label, boxShadow: `0 0 16px ${color.glow}` }} />
             {isAdmin && !groupsLocked ? (
-              <button className="btn-danger" style={{ padding: '5px 9px', fontSize: 12 }} onClick={() => onRemoveGroup(group.id)}>
-                🗑
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {unassignedCount > 0 && (
+                  <button
+                    onClick={() => onDraw(group.id)}
+                    disabled={isDrawing}
+                    style={{
+                      padding: '5px 10px', fontSize: 12, borderRadius: 8,
+                      border: `1px solid ${color.border}`,
+                      background: isDrawing ? `${color.glow}` : `${color.border}22`,
+                      color: color.label,
+                      cursor: isDrawing ? 'not-allowed' : 'pointer',
+                      fontWeight: 700, letterSpacing: 0.5,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {isDrawing ? '⏳ Drawing…' : '🎲 Draw'}
+                  </button>
+                )}
+                <button className="btn-danger" style={{ padding: '5px 9px', fontSize: 12 }} onClick={() => onRemoveGroup(group.id)}>
+                  🗑
+                </button>
+              </div>
             ) : null}
           </div>
         </div>
@@ -147,7 +166,7 @@ function GroupCard({ group, players, groupsLocked, isAdmin, onRemoveGroup, onRem
             No players assigned yet
           </div>
         ) : groupPlayers.map((player, idx) => (
-          <div key={player.id} style={{
+          <div key={player.id} className="fade-up" style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -209,6 +228,8 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
   const [playersPerGroup, setPlayersPerGroup] = useState(4)
   const [checkedPlayers, setCheckedPlayers] = useState(new Set())
   const [targetGroup, setTargetGroup] = useState('')
+  const [drawingGroupId, setDrawingGroupId] = useState(null)  // group currently being drawn into
+  const drawTimeouts = useRef([])
 
   function flash(msg, ok = true) {
     setFeedback({ msg, ok })
@@ -305,6 +326,57 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
     flash(`✅ ${checkedPlayers.size} player${checkedPlayers.size !== 1 ? 's' : ''} assigned to ${groupName}!`)
     setCheckedPlayers(new Set())
     setTargetGroup('')
+  }
+
+  function drawGroup(groupId) {
+    const ppg = parseInt(playersPerGroup, 10)
+    if (isNaN(ppg) || ppg < 2) {
+      flash('⚠️ Set players per group (min 2) before drawing.', false)
+      return
+    }
+
+    // Current unassigned at draw time
+    const currentAssigned = new Set(groups.flatMap(g => g.playerIds))
+    const pool = players.filter(p => !currentAssigned.has(p.id))
+
+    if (pool.length === 0) {
+      flash('⚠️ No unassigned players left to draw from.', false)
+      return
+    }
+
+    const count = Math.min(ppg, pool.length)
+    const shuffled = [...pool].sort(() => Math.random() - 0.5)
+    const drawn = shuffled.slice(0, count).map(p => p.id)
+
+    // Clear any in-progress draw
+    drawTimeouts.current.forEach(t => clearTimeout(t))
+    drawTimeouts.current = []
+
+    // Set drawing state
+    setDrawingGroupId(groupId)
+
+    // Remove all drawn players from the group first (reset), then add one by one
+    setGroups(prev => prev.map(g =>
+      g.id === groupId ? { ...g, playerIds: [] } : g
+    ))
+
+    // Add players one by one with delay
+    drawn.forEach((playerId, i) => {
+      const t = setTimeout(() => {
+        setGroups(prev => prev.map(g =>
+          g.id === groupId ? { ...g, playerIds: [...g.playerIds, playerId] } : g
+        ))
+        // On last player, clear drawing state
+        if (i === drawn.length - 1) {
+          const endT = setTimeout(() => {
+            setDrawingGroupId(null)
+            flash(`✅ ${drawn.length} players drawn into ${groups.find(g => g.id === groupId)?.name}!`)
+          }, 400)
+          drawTimeouts.current.push(endT)
+        }
+      }, i * 500)
+      drawTimeouts.current.push(t)
+    })
   }
 
   function removePlayerFromGroup(groupId, playerId) {
