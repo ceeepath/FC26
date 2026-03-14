@@ -438,7 +438,14 @@ export default function KnockoutBracket({
     setSelectedSeedIdx(null)
   }
 
-  // Build a map of playerId → groupId for clash detection
+  const previewPairs = (() => {
+    const padded = seeding.length % 2 === 1 ? [...seeding, 'BYE'] : [...seeding]
+    const pairs = []
+    for (let i = 0; i < padded.length; i += 2) pairs.push({ p1: padded[i], p2: padded[i + 1] })
+    return pairs
+  })()
+
+  // Build a map of playerId → groupId for clash detection (must come after previewPairs)
   const playerGroupMap = {}
   qualified.forEach(q => { playerGroupMap[q.id] = q.groupId })
 
@@ -449,13 +456,6 @@ export default function KnockoutBracket({
     playerGroupMap[pair.p2] &&
     playerGroupMap[pair.p1] === playerGroupMap[pair.p2]
   ).length
-
-  const previewPairs = (() => {
-    const padded = seeding.length % 2 === 1 ? [...seeding, 'BYE'] : [...seeding]
-    const pairs = []
-    for (let i = 0; i < padded.length; i += 2) pairs.push({ p1: padded[i], p2: padded[i + 1] })
-    return pairs
-  })()
 
   function handleLockBracket() {
     if (qualified.length < 2) {
