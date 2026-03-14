@@ -379,9 +379,8 @@ export default function Sidebar({
           bottom: 0,
           width: 276,
           zIndex: 70,
-          display: 'none',
+          display: 'block',
         }}
-        className="sidebar-desktop"
       >
         {sidebarContent}
       </div>
