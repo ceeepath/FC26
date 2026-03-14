@@ -127,7 +127,7 @@ function GroupCard({ group, players, groupsLocked, isAdmin, onRemoveGroup, onRem
             <span style={{ width: 10, height: 10, borderRadius: '50%', background: color.label, boxShadow: `0 0 16px ${color.glow}` }} />
             {isAdmin && !groupsLocked ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {unassignedCount > 0 && (
+                {onDraw && (
                   <button
                     onClick={() => onDraw(group.id)}
                     disabled={isDrawing}
@@ -616,6 +616,26 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
         </div>
       ) : null}
 
+      {!groupsLocked && isAdmin && groups.length > 0 && (
+        <div style={{ ...panelStyle({ padding: '14px 18px', marginBottom: 18 }), display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: 1 }}>DRAW SIZE</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>Players per group</label>
+            <input
+              type="number"
+              min="2"
+              max="20"
+              value={playersPerGroup}
+              onChange={e => setPlayersPerGroup(e.target.value)}
+              style={{ width: 70, padding: '6px 10px', borderRadius: 8, background: '#050e05', border: '1px solid var(--green-border)', color: 'var(--text-primary)', fontSize: 14, textAlign: 'center' }}
+            />
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            {unassignedPlayers.length} player{unassignedPlayers.length !== 1 ? 's' : ''} in pool · click 🎲 Draw on any group card
+          </div>
+        </div>
+      )}
+
       {groups.length === 0 ? (
         <div style={{ ...panelStyle({ padding: 42, textAlign: 'center' }) }}>
           <div style={{ fontSize: 42, marginBottom: 12 }}>📋</div>
@@ -635,6 +655,9 @@ export default function GroupSetup({ players, groups, setGroups, groupsLocked, s
               isAdmin={isAdmin}
               onRemoveGroup={removeGroup}
               onRemovePlayer={removePlayerFromGroup}
+              onDraw={drawGroup}
+              isDrawing={drawingGroupId === group.id}
+              unassignedCount={unassignedPlayers.length}
             />
           ))}
         </div>
