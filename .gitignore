@@ -82,8 +82,10 @@ out
 .nuxt
 dist
 
-# AI
+# CUSTOM
 CLAUDE*
+.env
+.keep
 
 # Gatsby files
 .cache/
