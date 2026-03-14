@@ -1,6 +1,8 @@
-const MEDAL = ['🥇', '🥈', '🥉']
+import { useState, useEffect } from 'react'
 import { CopyButton } from './WhatsAppExport'
 import { exportLeaderboard } from '../utils/whatsapp'
+
+const MEDAL = ['🥇', '🥈', '🥉']
 
 function calcLeaderboard(players, fixtures) {
   const played = fixtures.filter(f => f.played && !f.isBye)
@@ -141,7 +143,7 @@ function PodiumCard({ player, index }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10 }}>
         {[
           ['MP', player.MP, 'var(--text-primary)'],
           ['GF', player.GF, palette.text],
@@ -272,6 +274,13 @@ function TableCell({ children, align = 'left', muted = false, strong = false, co
 }
 
 export default function Leaderboard({ players, fixtures }) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
+
   const board = calcLeaderboard(players, fixtures)
   const played = fixtures.filter(f => f.played && !f.isBye)
   const groupPlayed = played.filter(f => f.type === 'group')
@@ -334,7 +343,7 @@ export default function Leaderboard({ players, fixtures }) {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '2fr 1fr',
+            gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr',
             gap: 18,
           }}>
             <div style={{
@@ -465,7 +474,7 @@ export default function Leaderboard({ players, fixtures }) {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1.15fr 1.55fr',
+            gridTemplateColumns: isMobile ? '1fr' : '1.15fr 1.55fr',
             gap: 18,
             marginBottom: 24,
             alignItems: 'start',

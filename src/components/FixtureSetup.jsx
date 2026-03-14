@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { generateId } from '../utils/storage'
 
 const STAGES = [
@@ -212,6 +212,12 @@ export default function FixtureSetup({
 }) {
   const [view, setView] = useState('group')
   const [editingId, setEditingId] = useState(null)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
 
   const groupFixtures = fixtures.filter(f => f.type === 'group')
   const fixturesGenerated = groupFixtures.length > 0
@@ -358,7 +364,7 @@ export default function FixtureSetup({
         boxShadow: '0 18px 60px rgba(0,0,0,0.28)',
       }}>
         <div style={{ position: 'absolute', right: -40, top: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,215,0,0.08)', filter: 'blur(18px)' }} />
-        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) minmax(300px, 0.9fr)', gap: 18 }}>
+        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.45fr) minmax(300px, 0.9fr)', gap: 18 }}>
           <div>
             <p style={{ color: 'var(--gold)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>{isLeague ? 'League · Fixtures & Results' : 'Stage 03 · Fixtures & Results'}</p>
             <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 42, letterSpacing: 2, color: 'var(--text-primary)', lineHeight: 1, marginBottom: 10 }}>{isLeague ? 'LEAGUE MATCH CENTER' : 'MATCH CONTROL CENTER'}</h2>
