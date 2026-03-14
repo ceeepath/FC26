@@ -1,16 +1,45 @@
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard',   icon: '⚡' },
-  { id: 'players',   label: 'Players',     icon: '👥' },
-  { id: 'groups',    label: 'Groups',      icon: '📋' },
-  { id: 'fixtures',  label: 'Fixtures',    icon: '📅' },
-  { id: 'standings', label: 'Standings',   icon: '📊' },
-  { id: 'knockout',  label: 'Knockout',    icon: '🏆' },
-  { id: 'scorers',   label: 'Leaderboard', icon: '🏅' },
-  { id: 'export',    label: 'Export',      icon: '📤' },
-  { id: 'settings',  label: 'Settings',    icon: '⚙️', adminOnly: true },
+  { id: 'dashboard', label: 'Dashboard',   icon: '⚡', hint: 'Overview + progress' },
+  { id: 'players',   label: 'Players',     icon: '⚽', hint: 'Register competitors' },
+  { id: 'groups',    label: 'Groups',      icon: '📋', hint: 'Create and assign groups' },
+  { id: 'fixtures',  label: 'Fixtures',    icon: '📅', hint: 'Generate and enter scores' },
+  { id: 'standings', label: 'Standings',   icon: '📊', hint: 'Qualification race' },
+  { id: 'knockout',  label: 'Knockout',    icon: '🏆', hint: 'Bracket + champion' },
+  { id: 'scorers',   label: 'Leaderboard', icon: '🏅', hint: 'Overall tournament race' },
+  { id: 'export',    label: 'Export',      icon: '📤', hint: 'WhatsApp share center' },
+  { id: 'settings',  label: 'Settings',    icon: '⚙️', adminOnly: true, hint: 'Admin controls' },
 ]
 
-function SidebarContent({ activeTab, tabs, onTabClick, isAdmin, onAdminClick, onLogout, onClose }) {
+function StageDot({ done, current, locked }) {
+  const bg = current
+    ? 'var(--gold)'
+    : done
+      ? '#68d168'
+      : locked
+        ? 'rgba(255,255,255,0.10)'
+        : 'rgba(255,255,255,0.18)'
+
+  return (
+    <div
+      style={{
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        background: bg,
+        boxShadow: current ? '0 0 14px rgba(245,197,24,0.55)' : done ? '0 0 10px rgba(104,209,104,0.22)' : 'none',
+        flexShrink: 0,
+      }}
+    />
+  )
+}
+
+export default function Sidebar({
+  activeTab, onTabClick, isAdmin,
+  onAdminClick, onLogout,
+  mobileOpen, onMobileClose,
+  tabs,
+  stats,
+}) {
   const tabMap = {}
   tabs.forEach(t => { tabMap[t.id] = t })
 
@@ -18,178 +47,373 @@ function SidebarContent({ activeTab, tabs, onTabClick, isAdmin, onAdminClick, on
     const tab = tabMap[item.id]
     if (!tab) return
     onTabClick(tab)
-    if (onClose) onClose()
+    onMobileClose?.()
   }
 
-  return (
+  const progressSteps = [
+    { key: 'players',  label: 'Players',   done: (stats?.players ?? 0) > 0, current: activeTab === 'players' },
+    { key: 'groups',   label: 'Groups',    done: !!stats?.groupsLocked, current: activeTab === 'groups' },
+    { key: 'fixtures', label: 'Fixtures',  done: !!stats?.fixturesGenerated, current: activeTab === 'fixtures' },
+    { key: 'knockout', label: 'Knockout',  done: !!stats?.knockoutStarted, current: activeTab === 'knockout' },
+  ]
+
+  const sidebarContent = (
     <div style={{
-      display: 'flex', flexDirection: 'column', height: '100%',
-      background: 'linear-gradient(180deg, #060d06 0%, #030803 100%)',
-      borderRight: '1px solid rgba(30,60,30,0.6)',
-      boxShadow: '4px 0 24px rgba(0,0,0,0.5)',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      background: 'linear-gradient(180deg, rgba(7,18,7,0.98) 0%, rgba(3,9,3,1) 100%)',
+      borderRight: '1px solid rgba(245,197,24,0.10)',
+      boxShadow: '24px 0 48px rgba(0,0,0,0.18)',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
-      {/* Logo */}
       <div style={{
-        padding: '18px 16px 14px',
-        borderBottom: '1px solid rgba(30,60,30,0.5)',
-        background: 'linear-gradient(180deg, rgba(26,60,10,0.3), transparent)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #1a4a0a, #0a2a04)',
-            border: '2px solid rgba(245,197,24,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, flexShrink: 0,
-            boxShadow: '0 0 16px rgba(245,197,24,0.15)',
-          }}>⚽</div>
-          <div>
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(circle at top left, rgba(245,197,24,0.08), transparent 26%), radial-gradient(circle at bottom center, rgba(76,175,80,0.08), transparent 22%)',
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{
+          padding: '22px 18px 14px',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <div style={{
-              fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 3, lineHeight: 1.1,
-              background: 'linear-gradient(135deg, #c9960f, #F5C518, #ffe066)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            }}>EA26</div>
-            <div style={{ fontSize: 9, color: '#3a5a3a', letterSpacing: 2, marginTop: 1 }}>TOURNAMENT MGR</div>
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              background: 'linear-gradient(135deg, rgba(245,197,24,0.18), rgba(245,197,24,0.04))',
+              border: '1px solid rgba(245,197,24,0.22)',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: 20,
+              boxShadow: '0 0 18px rgba(245,197,24,0.08)',
+              flexShrink: 0,
+            }}>
+              ⚽
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <div style={{
+                fontFamily: 'Bebas Neue',
+                fontSize: 22,
+                lineHeight: 0.95,
+                letterSpacing: 3,
+                background: 'linear-gradient(135deg, var(--gold-dim), var(--gold))',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                EA26
+              </div>
+              <div style={{ fontSize: 10, color: '#6f876f', letterSpacing: 2.2, marginTop: 2 }}>
+                TNC · FIFA PS5
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            padding: 14,
+            borderRadius: 18,
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+              <div style={{ fontSize: 10, color: '#8ca18c', letterSpacing: 1.7 }}>TOURNAMENT STATUS</div>
+              <div style={{
+                padding: '4px 8px',
+                borderRadius: 999,
+                border: '1px solid rgba(245,197,24,0.16)',
+                background: 'rgba(245,197,24,0.08)',
+                color: 'var(--gold)',
+                fontSize: 10,
+                letterSpacing: 1.4,
+              }}>
+                {stats?.phase ?? 'Setup'}
+              </div>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 10,
+              marginBottom: 12,
+            }}>
+              {[
+                ['Players', stats?.players ?? 0],
+                ['Groups', stats?.groups ?? 0],
+                ['Played', stats?.playedFixtures ?? 0],
+                ['Locked', stats?.groupsLocked ? 'Yes' : 'No'],
+              ].map(([label, value]) => (
+                <div key={label} style={{
+                  padding: '10px 10px',
+                  borderRadius: 12,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                }}>
+                  <div style={{ fontSize: 10, color: '#7f947f', letterSpacing: 1.2, marginBottom: 5 }}>{label}</div>
+                  <div style={{ fontFamily: 'Bebas Neue', fontSize: 22, lineHeight: 1, color: 'var(--text-primary)', letterSpacing: 1 }}>
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gap: 8 }}>
+              {progressSteps.map(step => {
+                const tab = tabMap[step.key]
+                const locked = !!tab?.locked
+                return (
+                  <div key={step.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <StageDot done={step.done} current={step.current} locked={locked} />
+                    <div style={{ fontSize: 12, color: step.current ? 'var(--text-primary)' : '#8da28d', fontWeight: step.current ? 700 : 600 }}>
+                      {step.label}
+                    </div>
+                    {locked && <span style={{ marginLeft: 'auto', fontSize: 10, color: '#537053' }}>🔒</span>}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }}>
-        {NAV_ITEMS.map(item => {
-          const tab = tabMap[item.id]
-          if (!tab) return null
-          const isActive   = activeTab === item.id
-          const isLocked   = tab.locked
-          const isAdminTab = tab.adminOnly && !isAdmin
-          const disabled   = isLocked || isAdminTab
+        <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
+          <div style={{ fontSize: 10, color: '#6f876f', letterSpacing: 1.8, padding: '0 10px 8px' }}>NAVIGATION</div>
 
-          return (
-            <button key={item.id}
-              onClick={() => !disabled && handleClick(item)}
-              title={isLocked ? 'Complete previous steps to unlock' : ''}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 12px', borderRadius: 8, marginBottom: 1,
-                border: isActive
-                  ? '1px solid rgba(245,197,24,0.25)'
-                  : '1px solid transparent',
-                background: isActive
-                  ? 'linear-gradient(90deg, rgba(245,197,24,0.12), rgba(245,197,24,0.04))'
-                  : 'transparent',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.28 : 1,
-                transition: 'all 0.15s',
-                position: 'relative',
-              }}
-              onMouseEnter={e => { if (!disabled && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-              onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
-            >
-              {/* Active bar */}
-              {isActive && (
+          {NAV_ITEMS.map(item => {
+            const tab = tabMap[item.id]
+            if (!tab) return null
+
+            const isActive = activeTab === item.id
+            const isLocked = !!tab.locked
+            const isAdminTab = !!tab.adminOnly && !isAdmin
+            const disabled = isLocked || isAdminTab
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleClick(item)}
+                disabled={disabled}
+                title={isLocked ? 'Complete previous steps to unlock' : item.hint}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '12px 12px',
+                  borderRadius: 16,
+                  marginBottom: 6,
+                  border: isActive ? '1px solid rgba(245,197,24,0.22)' : '1px solid transparent',
+                  background: isActive
+                    ? 'linear-gradient(90deg, rgba(245,197,24,0.12), rgba(255,255,255,0.03))'
+                    : 'transparent',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  opacity: disabled ? 0.38 : 1,
+                  transition: 'all 0.18s ease',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={e => {
+                  if (!disabled && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.035)'
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) e.currentTarget.style.background = 'transparent'
+                }}
+              >
                 <div style={{
-                  position: 'absolute', left: 0, top: '20%', bottom: '20%',
-                  width: 3, borderRadius: '0 3px 3px 0',
-                  background: 'var(--gold)',
-                  boxShadow: '0 0 8px var(--gold)',
-                }} />
-              )}
-              <span style={{ fontSize: 14, flexShrink: 0 }}>{item.icon}</span>
-              <span style={{
-                fontFamily: 'Barlow', fontWeight: 700, fontSize: 12,
-                color: isActive ? 'var(--gold)' : '#6a8a6a',
-                letterSpacing: 0.4,
-              }}>{item.label}</span>
-              {isActive && (
-                <div style={{
-                  marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%',
-                  background: 'var(--gold)', boxShadow: '0 0 6px var(--gold)',
-                }} />
-              )}
-              {(isLocked || isAdminTab) && (
-                <span style={{ marginLeft: 'auto', fontSize: 10, color: '#2a4a2a' }}>🔒</span>
-              )}
-            </button>
-          )
-        })}
-      </nav>
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  display: 'grid',
+                  placeItems: 'center',
+                  background: isActive ? 'rgba(245,197,24,0.12)' : 'rgba(255,255,255,0.035)',
+                  border: `1px solid ${isActive ? 'rgba(245,197,24,0.18)' : 'rgba(255,255,255,0.05)'}`,
+                  flexShrink: 0,
+                  fontSize: 16,
+                }}>
+                  {item.icon}
+                </div>
 
-      {/* Divider + Admin */}
-      <div style={{ padding: '10px 10px 14px', borderTop: '1px solid rgba(20,40,20,0.5)' }}>
-        {isAdmin ? (
-          <>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{
+                    fontFamily: 'Barlow',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: isActive ? 'var(--gold)' : 'var(--text-primary)',
+                    letterSpacing: 0.2,
+                    marginBottom: 2,
+                  }}>
+                    {item.label}
+                  </div>
+                  <div style={{
+                    fontSize: 11,
+                    color: isActive ? '#c4b584' : '#6f876f',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}>
+                    {isAdminTab ? 'Admin access required' : isLocked ? 'Locked for now' : item.hint}
+                  </div>
+                </div>
+
+                {isActive && (
+                  <div style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: 'var(--gold)',
+                    boxShadow: '0 0 10px rgba(245,197,24,0.55)',
+                    flexShrink: 0,
+                  }} />
+                )}
+
+                {!isActive && (isLocked || isAdminTab) && (
+                  <span style={{ fontSize: 11, color: '#466546', flexShrink: 0 }}>🔒</span>
+                )}
+              </button>
+            )
+          })}
+        </nav>
+
+        <div style={{ padding: '12px 12px 16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          {isAdmin ? (
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '7px 12px', borderRadius: 8, marginBottom: 6,
-              background: 'rgba(80,180,40,0.08)',
-              border: '1px solid rgba(80,180,40,0.2)',
+              padding: 14,
+              borderRadius: 16,
+              background: 'linear-gradient(180deg, rgba(76,175,80,0.10), rgba(76,175,80,0.04))',
+              border: '1px solid rgba(76,175,80,0.18)',
             }}>
-              <span style={{ fontSize: 12 }}>🛡</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#6ad46a', letterSpacing: 1 }}>ADMIN MODE</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  display: 'grid',
+                  placeItems: 'center',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  fontSize: 16,
+                }}>
+                  🛡
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#7fd37f', letterSpacing: 1.5 }}>ADMIN MODE</div>
+                  <div style={{ fontSize: 12, color: '#bce6bc', fontWeight: 700 }}>Unlocked controls are active</div>
+                </div>
+              </div>
+
+              <button
+                onClick={onLogout}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  background: 'transparent',
+                  border: '1px solid rgba(224,82,82,0.20)',
+                  color: '#d58787',
+                  fontSize: 12,
+                  fontFamily: 'Barlow',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'rgba(224,82,82,0.45)'
+                  e.currentTarget.style.background = 'rgba(224,82,82,0.05)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'rgba(224,82,82,0.20)'
+                  e.currentTarget.style.background = 'transparent'
+                }}
+              >
+                Logout
+              </button>
             </div>
-            <button onClick={onLogout} style={{
-              width: '100%', padding: '7px 12px', borderRadius: 8,
-              background: 'transparent', border: '1px solid rgba(224,82,82,0.15)',
-              color: '#6a4a4a', fontSize: 11, fontFamily: 'Barlow', fontWeight: 700,
-              cursor: 'pointer', letterSpacing: 0.5, transition: 'all 0.15s',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--danger)'; e.currentTarget.style.color = 'var(--danger)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(224,82,82,0.15)'; e.currentTarget.style.color = '#6a4a4a' }}
-            >
-              Logout
-            </button>
-          </>
-        ) : (
-          <button onClick={onAdminClick} style={{
-            width: '100%', padding: '9px 12px', borderRadius: 8,
-            background: 'transparent', border: '1px solid rgba(40,80,40,0.5)',
-            color: '#4a7a4a', fontSize: 11, fontFamily: 'Barlow', fontWeight: 700,
-            cursor: 'pointer', letterSpacing: 0.5, transition: 'all 0.15s',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(245,197,24,0.4)'; e.currentTarget.style.color = 'var(--gold)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(40,80,40,0.5)'; e.currentTarget.style.color = '#4a7a4a' }}
-          >
-            🔐 Admin Login
-          </button>
-        )}
+          ) : (
+            <div style={{
+              padding: 14,
+              borderRadius: 16,
+              background: 'linear-gradient(180deg, rgba(245,197,24,0.06), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(245,197,24,0.12)',
+            }}>
+              <div style={{ fontSize: 11, color: '#d2bc75', letterSpacing: 1.5, marginBottom: 6 }}>ADMIN ACCESS</div>
+              <div style={{ fontSize: 12, color: '#9aae9a', marginBottom: 12 }}>
+                Login to unlock settings and protected tournament actions.
+              </div>
+
+              <button
+                onClick={onAdminClick}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  background: 'rgba(245,197,24,0.08)',
+                  border: '1px solid rgba(245,197,24,0.18)',
+                  color: 'var(--gold)',
+                  fontSize: 12,
+                  fontFamily: 'Barlow',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  letterSpacing: 0.3,
+                }}
+              >
+                🔐 Admin Login
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
-}
 
-export default function Sidebar({
-  activeTab, onTabClick, isAdmin, onAdminClick, onLogout,
-  mobileOpen, onMobileClose, tabs,
-}) {
   return (
     <>
-      {/* Overlay for mobile */}
-      {mobileOpen && (
-        <div onClick={onMobileClose} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-          zIndex: 199, backdropFilter: 'blur(3px)',
-        }} />
-      )}
+      <div
+        style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 276,
+          zIndex: 70,
+          display: 'none',
+        }}
+        className="sidebar-desktop"
+      >
+        {sidebarContent}
+      </div>
 
-      {/* Drawer (used for both desktop fixed + mobile slide-in) */}
       {mobileOpen && (
-        <div style={{
-          position: 'fixed', left: 0, top: 0, bottom: 0,
-          width: 200, zIndex: 200,
-          animation: 'slideInLeft 0.22s cubic-bezier(0.2, 0, 0, 1)',
-        }}>
-          <SidebarContent
-            activeTab={activeTab} tabs={tabs}
-            onTabClick={onTabClick} isAdmin={isAdmin}
-            onAdminClick={onAdminClick} onLogout={onLogout}
-            onClose={onMobileClose}
+        <>
+          <div
+            onClick={onMobileClose}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.62)',
+              zIndex: 199,
+              backdropFilter: 'blur(6px)',
+            }}
           />
-        </div>
+          <div
+            style={{
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 286,
+              maxWidth: '86vw',
+              zIndex: 200,
+              animation: 'slideInLeft 0.25s ease',
+            }}
+          >
+            {sidebarContent}
+          </div>
+        </>
       )}
-
-      {/* Desktop fixed sidebar — rendered via a portal-like div in App.jsx */}
     </>
   )
 }
-
-export { SidebarContent }

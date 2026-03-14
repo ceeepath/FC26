@@ -7,7 +7,7 @@ import KnockoutBracket from './components/KnockoutBracket'
 import Leaderboard from './components/LeaderBoard'
 import WhatsAppExport from './components/WhatsAppExport'
 import Dashboard from './components/Dashboard'
-import Sidebar, { SidebarContent } from './components/Sidebar'
+import Sidebar from './components/Sidebar'
 import Settings from './components/Settings'
 import AdminLogin from './components/AdminLogin'
 import { load, save, KEYS } from './utils/storage'
@@ -15,6 +15,41 @@ import { load, save, KEYS } from './utils/storage'
 const DEFAULT_SETTINGS       = { adminPassword: 'ea26admin', openResultEntry: false, minPlayers: 1 }
 const DEFAULT_FIXTURE_CONFIG = { group: 1, quarter: 1, semi: 1, final: 1 }
 const DEFAULT_KNOCKOUT       = { locked: false, seeding: [], totalRounds: 0 }
+
+function getPhaseLabel({ players, groupsLocked, fixturesGenerated, knockoutBracket }) {
+  if ((knockoutBracket?.seeding?.length ?? 0) > 0 || knockoutBracket?.locked) return 'Knockout'
+  if (fixturesGenerated) return 'Group Stage'
+  if (groupsLocked) return 'Fixtures'
+  if ((players?.length ?? 0) > 0) return 'Setup'
+  return 'Registration'
+}
+
+function TopBadge({ children, tone = 'gold' }) {
+  const tones = {
+    gold: { color: 'var(--gold)', bg: 'rgba(245,197,24,0.08)', border: 'rgba(245,197,24,0.18)' },
+    green: { color: '#83d883', bg: 'rgba(76,175,80,0.10)', border: 'rgba(76,175,80,0.18)' },
+    blue: { color: '#8ec9ff', bg: 'rgba(108,168,255,0.10)', border: 'rgba(108,168,255,0.18)' },
+  }
+  const palette = tones[tone] ?? tones.gold
+
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '6px 10px',
+      borderRadius: 999,
+      fontSize: 11,
+      letterSpacing: 1.4,
+      color: palette.color,
+      background: palette.bg,
+      border: `1px solid ${palette.border}`,
+      whiteSpace: 'nowrap',
+    }}>
+      {children}
+    </span>
+  )
+}
 
 export default function App() {
   const [players,         setPlayers]        = useState(() => load(KEYS.PLAYERS, []))
@@ -49,6 +84,9 @@ export default function App() {
   useEffect(() => { save(KEYS.SETTINGS,         settings)        }, [settings])
 
   const fixturesGenerated = fixtures.length > 0
+  const playedFixtures = fixtures.filter(f => f.played && !f.isBye).length
+  const knockoutStarted = fixtures.some(f => f.type === 'knockout')
+  const phaseLabel = getPhaseLabel({ players, groupsLocked, fixturesGenerated, knockoutBracket })
 
   const TABS = [
     { id: 'dashboard', label: 'Dashboard',   icon: '⚡' },
@@ -62,158 +100,311 @@ export default function App() {
     { id: 'settings',  label: 'Settings',    icon: '⚙️', adminOnly: true },
   ]
 
+  const activeMeta = TABS.find(t => t.id === activeTab) ?? TABS[0]
+
   function handleTabClick(tab) {
     if (tab.adminOnly && !isAdmin) { setShowLogin(true); return }
     if (tab.locked) return
     setActiveTab(tab.id)
   }
 
-  function handleAdminLogin() { setIsAdmin(true); setActiveTab('settings') }
-  function handleLogout()     { setIsAdmin(false); setActiveTab('dashboard') }
+  function handleAdminLogin() {
+    setIsAdmin(true)
+    setActiveTab('settings')
+    setShowLogin(false)
+  }
+
+  function handleLogout() {
+    setIsAdmin(false)
+    setActiveTab('dashboard')
+  }
+
+  const sidebarStats = {
+    phase: phaseLabel,
+    players: players.length,
+    groups: groups.length,
+    playedFixtures,
+    groupsLocked,
+    fixturesGenerated,
+    knockoutStarted,
+  }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-
-      {/* ── Desktop Sidebar ── */}
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--green-deep)' }}>
       {!isMobile && (
-        <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 200, zIndex: 50 }}>
-          <SidebarContent
-            activeTab={activeTab} tabs={TABS}
-            onTabClick={handleTabClick} isAdmin={isAdmin}
-            onAdminClick={() => setShowLogin(true)} onLogout={handleLogout}
+        <div style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 276,
+          zIndex: 70,
+        }}>
+          <Sidebar
+            tabs={TABS}
+            activeTab={activeTab}
+            onTabClick={handleTabClick}
+            isAdmin={isAdmin}
+            onAdminClick={() => setShowLogin(true)}
+            onLogout={handleLogout}
+            mobileOpen={false}
+            onMobileClose={() => {}}
+            stats={sidebarStats}
           />
         </div>
       )}
 
-      {/* ── Mobile Sidebar drawer ── */}
       {isMobile && (
         <Sidebar
-          tabs={TABS} activeTab={activeTab}
-          onTabClick={handleTabClick} isAdmin={isAdmin}
-          onAdminClick={() => setShowLogin(true)} onLogout={handleLogout}
-          mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)}
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabClick={handleTabClick}
+          isAdmin={isAdmin}
+          onAdminClick={() => setShowLogin(true)}
+          onLogout={handleLogout}
+          mobileOpen={mobileOpen}
+          onMobileClose={() => setMobileOpen(false)}
+          stats={sidebarStats}
         />
       )}
 
-      {/* ── Main content area ── */}
       <div style={{
         flex: 1,
-        display: 'flex', flexDirection: 'column',
+        display: 'flex',
+        flexDirection: 'column',
         minWidth: 0,
-        marginLeft: isMobile ? 0 : 200,
+        marginLeft: isMobile ? 0 : 276,
       }}>
-
-        {/* Mobile top bar — hidden on desktop */}
-        {isMobile && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 16px', height: 54,
-          background: 'linear-gradient(180deg, #080f08, #040a04)',
-          borderBottom: '1px solid #0f2a0f',
-          position: 'sticky', top: 0, zIndex: 90,
+        <header style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 60,
+          backdropFilter: 'blur(12px)',
+          background: 'linear-gradient(180deg, rgba(4,12,4,0.88), rgba(4,12,4,0.72))',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
         }}>
-          {/* Hamburger */}
-          <button
-            onClick={() => setMobileOpen(true)}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: '6px 8px', borderRadius: 6, color: 'var(--text-muted)',
-              fontSize: 18, lineHeight: 1,
-            }}
-          >
-            ☰
-          </button>
+          <div style={{
+            maxWidth: 1240,
+            margin: '0 auto',
+            padding: isMobile ? '12px 16px' : '14px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            flexWrap: 'wrap',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+              {isMobile && (
+                <button
+                  onClick={() => setMobileOpen(true)}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(255,255,255,0.03)',
+                    color: 'var(--text-primary)',
+                    fontSize: 18,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  ☰
+                </button>
+              )}
 
-          {/* Logo center */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 15 }}>⚽</span>
-            <span style={{
-              fontFamily: 'Bebas Neue', fontSize: 16, letterSpacing: 3,
-              background: 'linear-gradient(135deg, var(--gold-dim), var(--gold))',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            }}>EA26</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+                  <div style={{
+                    fontFamily: 'Bebas Neue',
+                    fontSize: isMobile ? 24 : 30,
+                    lineHeight: 0.95,
+                    letterSpacing: 2,
+                    color: 'var(--gold)',
+                  }}>
+                    {activeMeta.label}
+                  </div>
+
+                  <TopBadge tone="gold">{phaseLabel}</TopBadge>
+                  {isAdmin && <TopBadge tone="green">🛡 Admin</TopBadge>}
+                  {settings.openResultEntry && <TopBadge tone="blue">🔓 Open Result Entry</TopBadge>}
+                </div>
+
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <span>{players.length} players</span>
+                  <span>{groups.length} groups</span>
+                  <span>{playedFixtures} played matches</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              {!isAdmin ? (
+                <button
+                  onClick={() => setShowLogin(true)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    background: 'rgba(245,197,24,0.08)',
+                    border: '1px solid rgba(245,197,24,0.18)',
+                    color: 'var(--gold)',
+                    fontSize: 12,
+                    fontFamily: 'Barlow',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔐 Admin Login
+                </button>
+              ) : (
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    background: 'rgba(224,82,82,0.08)',
+                    border: '1px solid rgba(224,82,82,0.18)',
+                    color: '#e98d8d',
+                    fontSize: 12,
+                    fontFamily: 'Barlow',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Logout
+                </button>
+              )}
+            </div>
           </div>
+        </header>
 
-          {/* Admin badge or login */}
-          {isAdmin
-            ? <span style={{ fontSize: 11, fontWeight: 700, color: '#6ad46a', letterSpacing: 1 }}>🛡 ADMIN</span>
-            : <button onClick={() => setShowLogin(true)} style={{
-                background: 'none', border: '1px solid #1a3a1a', borderRadius: 6,
-                color: '#5a8a5a', fontSize: 11, fontWeight: 700, padding: '4px 8px', cursor: 'pointer',
-              }}>Login</button>
-          }
-        </div>
-        )}
+        <main style={{ flex: 1, padding: isMobile ? '18px 14px 24px' : '26px 24px 30px' }}>
+          <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%' }}>
+            {activeTab === 'dashboard' && (
+              <Dashboard
+                players={players}
+                groups={groups}
+                fixtures={fixtures}
+                knockoutBracket={knockoutBracket}
+                qualifierConfig={qualifierConfig}
+              />
+            )}
 
-        {/* Page content */}
-        <main style={{ flex: 1, padding: '24px 20px', maxWidth: 900, width: '100%', margin: '0 auto' }}>
-          {activeTab === 'dashboard' && (
-            <Dashboard
-              players={players} groups={groups} fixtures={fixtures}
-              knockoutBracket={knockoutBracket} qualifierConfig={qualifierConfig}
-            />
-          )}
-          {activeTab === 'players' && (
-            <PlayerManagement players={players} setPlayers={setPlayers} isAdmin={isAdmin} minPlayers={settings.minPlayers ?? 1} />
-          )}
-          {activeTab === 'groups' && (
-            <GroupSetup players={players} groups={groups} setGroups={setGroups}
-              groupsLocked={groupsLocked} setGroupsLocked={setGroupsLocked} isAdmin={isAdmin} />
-          )}
-          {activeTab === 'fixtures' && (
-            <FixtureSetup
-              players={players} groups={groups}
-              fixtures={fixtures} setFixtures={setFixtures}
-              fixtureConfig={fixtureConfig} setFixtureConfig={setFixtureConfig}
-              fixturesLocked={fixturesLocked} setFixturesLocked={setFixturesLocked}
-              openResultEntry={settings.openResultEntry}
-              isAdmin={isAdmin}
-            />
-          )}
-          {activeTab === 'standings' && (
-            <GroupStandings
-              players={players} groups={groups} fixtures={fixtures}
-              qualifierConfig={qualifierConfig} setQualifierConfig={setQualifierConfig}
-              isAdmin={isAdmin}
-            />
-          )}
-          {activeTab === 'knockout' && (
-            <KnockoutBracket
-              players={players} groups={groups}
-              fixtures={fixtures} setFixtures={setFixtures}
-              fixtureConfig={fixtureConfig} qualifierConfig={qualifierConfig}
-              knockoutBracket={knockoutBracket} setKnockoutBracket={setKnockoutBracket}
-              openResultEntry={settings.openResultEntry}
-              isAdmin={isAdmin}
-            />
-          )}
-          {activeTab === 'scorers' && (
-            <Leaderboard players={players} fixtures={fixtures} />
-          )}
-          {activeTab === 'export' && (
-            <WhatsAppExport
-              players={players} groups={groups}
-              fixtures={fixtures} fixtureConfig={fixtureConfig}
-              qualifierConfig={qualifierConfig} knockoutBracket={knockoutBracket}
-            />
-          )}
-          {activeTab === 'settings' && isAdmin && (
-            <Settings settings={settings} setSettings={setSettings} onLogout={handleLogout} />
-          )}
+            {activeTab === 'players' && (
+              <PlayerManagement
+                players={players}
+                setPlayers={setPlayers}
+                isAdmin={isAdmin}
+                minPlayers={settings.minPlayers ?? 1}
+              />
+            )}
+
+            {activeTab === 'groups' && (
+              <GroupSetup
+                players={players}
+                groups={groups}
+                setGroups={setGroups}
+                groupsLocked={groupsLocked}
+                setGroupsLocked={setGroupsLocked}
+                isAdmin={isAdmin}
+              />
+            )}
+
+            {activeTab === 'fixtures' && (
+              <FixtureSetup
+                players={players}
+                groups={groups}
+                fixtures={fixtures}
+                setFixtures={setFixtures}
+                fixtureConfig={fixtureConfig}
+                setFixtureConfig={setFixtureConfig}
+                fixturesLocked={fixturesLocked}
+                setFixturesLocked={setFixturesLocked}
+                openResultEntry={settings.openResultEntry}
+                isAdmin={isAdmin}
+              />
+            )}
+
+            {activeTab === 'standings' && (
+              <GroupStandings
+                players={players}
+                groups={groups}
+                fixtures={fixtures}
+                qualifierConfig={qualifierConfig}
+                setQualifierConfig={setQualifierConfig}
+                isAdmin={isAdmin}
+              />
+            )}
+
+            {activeTab === 'knockout' && (
+              <KnockoutBracket
+                players={players}
+                groups={groups}
+                fixtures={fixtures}
+                setFixtures={setFixtures}
+                fixtureConfig={fixtureConfig}
+                qualifierConfig={qualifierConfig}
+                knockoutBracket={knockoutBracket}
+                setKnockoutBracket={setKnockoutBracket}
+                openResultEntry={settings.openResultEntry}
+                isAdmin={isAdmin}
+              />
+            )}
+
+            {activeTab === 'scorers' && (
+              <Leaderboard players={players} fixtures={fixtures} />
+            )}
+
+            {activeTab === 'export' && (
+              <WhatsAppExport
+                players={players}
+                groups={groups}
+                fixtures={fixtures}
+                fixtureConfig={fixtureConfig}
+                qualifierConfig={qualifierConfig}
+                knockoutBracket={knockoutBracket}
+              />
+            )}
+
+            {activeTab === 'settings' && isAdmin && (
+              <Settings
+                settings={settings}
+                setSettings={setSettings}
+                onLogout={handleLogout}
+              />
+            )}
+          </div>
         </main>
 
         <footer style={{
-          textAlign: 'center', padding: '14px 20px',
-          color: '#1a3a1a', fontSize: 11,
-          borderTop: '1px solid #0a1a0a',
-          letterSpacing: 2, fontFamily: 'Bebas Neue',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          background: 'linear-gradient(180deg, rgba(5,14,5,0.9), rgba(3,9,3,0.95))',
         }}>
-          EA26 TOURNAMENT · TNC · FIFA PS5
+          <div style={{
+            maxWidth: 1240,
+            margin: '0 auto',
+            padding: '14px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            flexWrap: 'wrap',
+            color: '#5f785f',
+            fontSize: 11,
+            letterSpacing: 1.6,
+          }}>
+            <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, letterSpacing: 2.2 }}>EA26 TOURNAMENT MANAGER</span>
+            <span>TNC · FIFA PS5 · Local-first tournament app</span>
+          </div>
         </footer>
       </div>
 
       {showLogin && (
-        <AdminLogin correctPassword={settings.adminPassword} onLogin={handleAdminLogin} onClose={() => setShowLogin(false)} />
+        <AdminLogin
+          correctPassword={settings.adminPassword}
+          onLogin={handleAdminLogin}
+          onClose={() => setShowLogin(false)}
+        />
       )}
     </div>
   )
