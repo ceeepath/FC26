@@ -2,15 +2,16 @@ import { useState, useRef } from 'react'
 import { generateId } from '../utils/storage'
 
 export default function PlayerManagement({ players, setPlayers, isAdmin, minPlayers }) {
-  const [newName, setNewName] = useState('')
-  const [editingId, setEditingId] = useState(null)
-  const [editName, setEditName] = useState('')
-  const [search, setSearch] = useState('')
-  const [feedback, setFeedback] = useState({ msg: '', ok: true })
+  const [newName,    setNewName]    = useState('')
+  const [newGameId,  setNewGameId]  = useState('')
+  const [editingId,  setEditingId]  = useState(null)
+  const [editName,   setEditName]   = useState('')
+  const [editGameId, setEditGameId] = useState('')
+  const [search,     setSearch]     = useState('')
+  const [feedback,   setFeedback]   = useState({ msg: '', ok: true })
 
-  // Bulk import state
-  const [showImport, setShowImport] = useState(false)
-  const [importText, setImportText] = useState('')
+  const [showImport,    setShowImport]    = useState(false)
+  const [importText,    setImportText]    = useState('')
   const [importPreview, setImportPreview] = useState([])
   const fileRef = useRef(null)
 
@@ -28,19 +29,26 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
     if (players.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
       flash('⚠️ Player already exists!', false); return
     }
-    setPlayers(prev => [...prev, { id: generateId(), name: trimmed }])
+    setPlayers(prev => [...prev, { id: generateId(), name: trimmed, gameId: newGameId.trim() }])
     setNewName('')
+    setNewGameId('')
     flash(`✅ ${trimmed} added!`)
   }
 
-  function startEdit(player) { setEditingId(player.id); setEditName(player.name) }
+  function startEdit(player) {
+    setEditingId(player.id)
+    setEditName(player.name)
+    setEditGameId(player.gameId ?? '')
+  }
 
   function saveEdit(id) {
     const trimmed = editName.trim()
     if (!trimmed) return
-    setPlayers(prev => prev.map(p => p.id === id ? { ...p, name: trimmed } : p))
+    setPlayers(prev => prev.map(p =>
+      p.id === id ? { ...p, name: trimmed, gameId: editGameId.trim() } : p
+    ))
     setEditingId(null)
-    flash('✅ Name updated!')
+    flash('✅ Player updated!')
   }
 
   function removePlayer(id, name) {
@@ -49,17 +57,21 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
     flash(`🗑️ ${name} removed.`)
   }
 
-  // ── Bulk Import ──
-  function parseNames(text) {
+  function parseLines(text) {
     return text
-      .split(/[\n,]+/)           // split by newline or comma
-      .map(s => s.trim())
-      .filter(s => s.length > 0)
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => {
+        const parts = line.split(',').map(s => s.trim())
+        return { name: parts[0], gameId: parts[1] ?? '' }
+      })
+      .filter(p => p.name.length > 0)
   }
 
   function handleImportTextChange(text) {
     setImportText(text)
-    setImportPreview(parseNames(text))
+    setImportPreview(parseLines(text))
   }
 
   function handleFileUpload(e) {
@@ -69,7 +81,7 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
     reader.onload = ev => {
       const text = ev.target.result
       setImportText(text)
-      setImportPreview(parseNames(text))
+      setImportPreview(parseLines(text))
     }
     reader.readAsText(file)
   }
@@ -78,9 +90,9 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
     const existing = new Set(players.map(p => p.name.toLowerCase()))
     let added = 0, skipped = 0
     const newPlayers = []
-    for (const name of importPreview) {
+    for (const { name, gameId } of importPreview) {
       if (existing.has(name.toLowerCase())) { skipped++; continue }
-      newPlayers.push({ id: generateId(), name })
+      newPlayers.push({ id: generateId(), name, gameId: gameId ?? '' })
       existing.add(name.toLowerCase())
       added++
     }
@@ -97,7 +109,6 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
 
   return (
     <div className="fade-up">
-      {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 32, color: 'var(--gold)', letterSpacing: 2 }}>
           PLAYER ROSTER
@@ -105,9 +116,7 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
         <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
           {players.length} player{players.length !== 1 ? 's' : ''} registered
           {min > 1 && remaining > 0 && (
-            <span style={{ color: '#e07a30', marginLeft: 10 }}>
-              · Need {remaining} more to start
-            </span>
+            <span style={{ color: '#e07a30', marginLeft: 10 }}>· Need {remaining} more to start</span>
           )}
           {min > 1 && players.length >= min && (
             <span style={{ color: '#4caf50', marginLeft: 10 }}>· ✓ Ready to group</span>
@@ -115,22 +124,26 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
         </p>
       </div>
 
-      {/* Admin controls */}
       {isAdmin && (
         <>
-          {/* Single add */}
-          <form onSubmit={addPlayer} style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+          <form onSubmit={addPlayer} style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
             <input
               type="text"
-              placeholder="Enter player name…"
+              placeholder="Player name…"
               value={newName}
               onChange={e => setNewName(e.target.value)}
-              style={{ flex: 1 }}
+              style={{ flex: '2 1 140px' }}
+            />
+            <input
+              type="text"
+              placeholder="Game ID (optional)"
+              value={newGameId}
+              onChange={e => setNewGameId(e.target.value)}
+              style={{ flex: '1 1 120px' }}
             />
             <button type="submit" className="btn-gold" style={{ whiteSpace: 'nowrap' }}>+ ADD</button>
           </form>
 
-          {/* Import toggle */}
           <button
             className="btn-ghost"
             style={{ width: '100%', marginBottom: 20, fontSize: 14 }}
@@ -139,92 +152,64 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
             {showImport ? '✕ Close Import' : '📥 Bulk Import Players'}
           </button>
 
-          {/* Import panel */}
           {showImport && (
             <div className="card" style={{ padding: 20, marginBottom: 20 }}>
-              <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--gold)', marginBottom: 4 }}>
-                BULK IMPORT
-              </p>
+              <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--gold)', marginBottom: 4 }}>BULK IMPORT</p>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
-                Paste names below (one per line or comma-separated), or upload a <code style={{ color: 'var(--gold)' }}>.txt</code> / <code style={{ color: 'var(--gold)' }}>.csv</code> file.
+                One player per line. Optionally include Game ID after a comma —{' '}
+                <code style={{ color: 'var(--gold)' }}>Name, GameID</code>
               </p>
 
-              {/* File upload */}
               <div
                 style={{
-                  border: '1px dashed var(--green-border)',
-                  borderRadius: 8,
-                  padding: '14px 16px',
-                  marginBottom: 12,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  cursor: 'pointer',
-                  background: '#050e05',
+                  border: '1px dashed var(--green-border)', borderRadius: 8,
+                  padding: '14px 16px', marginBottom: 12,
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  cursor: 'pointer', background: '#050e05',
                 }}
                 onClick={() => fileRef.current?.click()}
               >
                 <span style={{ fontSize: 22 }}>📄</span>
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 14 }}>Click to upload a file</p>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>.txt or .csv — one name per line</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>.txt or .csv — one player per line</p>
                 </div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".txt,.csv"
-                  style={{ display: 'none' }}
-                  onChange={handleFileUpload}
-                />
+                <input ref={fileRef} type="file" accept=".txt,.csv" style={{ display: 'none' }} onChange={handleFileUpload} />
               </div>
 
               <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, marginBottom: 10 }}>— or paste manually —</p>
 
-              {/* Paste area */}
               <textarea
                 value={importText}
                 onChange={e => handleImportTextChange(e.target.value)}
-                placeholder={"Tunde\nChinedu\nMoses\nDavid\n..."}
+                placeholder={"Tunde, PSN_Tunde\nChinedu\nMoses, EA_Moses99\nDavid\n..."}
                 rows={6}
                 style={{
-                  width: '100%',
-                  background: '#050e05',
+                  width: '100%', background: '#050e05',
                   border: '1px solid var(--green-border)',
-                  color: 'var(--text-primary)',
-                  borderRadius: 8,
-                  padding: '10px 14px',
-                  fontFamily: 'Barlow, sans-serif',
-                  fontSize: 14,
-                  resize: 'vertical',
-                  outline: 'none',
-                  marginBottom: 12,
+                  color: 'var(--text-primary)', borderRadius: 8,
+                  padding: '10px 14px', fontSize: 14,
+                  resize: 'vertical', outline: 'none', marginBottom: 12,
                 }}
               />
 
-              {/* Preview */}
               {importPreview.length > 0 && (
                 <div style={{
-                  background: '#0a1f0a',
-                  border: '1px solid #2a4a2a',
-                  borderRadius: 8,
-                  padding: '12px 14px',
-                  marginBottom: 14,
+                  background: '#0a1f0a', border: '1px solid #2a4a2a',
+                  borderRadius: 8, padding: '12px 14px', marginBottom: 14,
                 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: '#4caf50', marginBottom: 8 }}>
-                    Preview — {importPreview.length} name{importPreview.length !== 1 ? 's' : ''} detected
+                    Preview — {importPreview.length} player{importPreview.length !== 1 ? 's' : ''} detected
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {importPreview.slice(0, 30).map((name, i) => (
+                    {importPreview.slice(0, 30).map((p, i) => (
                       <span key={i} style={{
-                        background: '#0f2a0f',
-                        border: '1px solid #2a5a2a',
-                        color: '#a8d5a8',
-                        borderRadius: 16,
-                        padding: '3px 10px',
-                        fontSize: 13,
-                        fontWeight: 600,
+                        background: '#0f2a0f', border: '1px solid #2a5a2a',
+                        color: '#a8d5a8', borderRadius: 16,
+                        padding: '3px 10px', fontSize: 13, fontWeight: 600,
                       }}>
-                        {name}
+                        {p.name}
+                        {p.gameId && <span style={{ opacity: 0.65, marginLeft: 5 }}>· {p.gameId}</span>}
                       </span>
                     ))}
                     {importPreview.length > 30 && (
@@ -254,19 +239,17 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
         </>
       )}
 
-      {/* Feedback */}
       {feedback.msg && (
         <div style={{
           background: feedback.ok ? '#0e2a0e' : '#2a0e0e',
           border: `1px solid ${feedback.ok ? 'var(--green-border)' : '#5a2020'}`,
           borderRadius: 8, padding: '10px 16px', marginBottom: 16,
-          fontSize: 14, color: feedback.ok ? '#a8d5a8' : '#e08080'
+          fontSize: 14, color: feedback.ok ? '#a8d5a8' : '#e08080',
         }}>
           {feedback.msg}
         </div>
       )}
 
-      {/* Search */}
       {players.length > 5 && (
         <input
           type="text"
@@ -277,7 +260,6 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
         />
       )}
 
-      {/* Player list */}
       {filtered.length === 0 ? (
         <div className="card" style={{ padding: 40, textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>⚽</div>
@@ -304,20 +286,36 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
               </span>
 
               {editingId === player.id && isAdmin ? (
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={e => setEditName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') saveEdit(player.id); if (e.key === 'Escape') setEditingId(null) }}
-                  autoFocus
-                  style={{ flex: 1, padding: '5px 10px', fontSize: 14 }}
-                />
+                <div style={{ flex: 1, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') saveEdit(player.id); if (e.key === 'Escape') setEditingId(null) }}
+                    autoFocus
+                    placeholder="Name"
+                    style={{ flex: '2 1 120px', padding: '5px 10px', fontSize: 14 }}
+                  />
+                  <input
+                    type="text"
+                    value={editGameId}
+                    onChange={e => setEditGameId(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') saveEdit(player.id); if (e.key === 'Escape') setEditingId(null) }}
+                    placeholder="Game ID (optional)"
+                    style={{ flex: '1 1 100px', padding: '5px 10px', fontSize: 14 }}
+                  />
+                </div>
               ) : (
-                <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{player.name}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{player.name}</div>
+                  {player.gameId && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{player.gameId}</div>
+                  )}
+                </div>
               )}
 
               {isAdmin && (
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   {editingId === player.id ? (
                     <>
                       <button className="btn-gold" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => saveEdit(player.id)}>Save</button>
