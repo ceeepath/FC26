@@ -1,3 +1,25 @@
+// ── Color helper — replaces color-mix() for Safari < 15.4 compatibility ──
+const CSS_VAR_MAP = {
+  'var(--gold)':        '#d4af37',
+  'var(--gold-dim)':    '#b8962e',
+  'var(--card-green)':  '#5d8f6a',
+  'var(--card-blue)':   '#6d8ca6',
+  'var(--card-orange)': '#a67943',
+  'var(--card-teal)':   '#5a8c86',
+  'var(--card-purple)': '#7f6e9e',
+  'var(--text-muted)':  '#8f978f',
+}
+
+function withAlpha(color, alpha) {
+  const hex = CSS_VAR_MAP[color] ?? color
+  // Parse hex → r,g,b
+  const h = hex.replace('#', '')
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
 function getPhaseData({ groups, totalGroupFixtures, playedGroupFixtures, knockoutLocked, totalKOFixtures, playedKOFixtures }) {
   const allGroupDone = totalGroupFixtures > 0 && playedGroupFixtures === totalGroupFixtures
 
@@ -65,8 +87,8 @@ function StatCard({ icon, label, value, sub, accent = 'var(--gold)' }) {
       style={{
         padding: 18,
         borderRadius: 18,
-        background: `linear-gradient(180deg, color-mix(in srgb, ${accent} 10%, transparent), rgba(16,29,23,0.96))`,
-        border: `1px solid color-mix(in srgb, ${accent} 35%, var(--border-soft))`,
+        background: `linear-gradient(180deg, ${withAlpha(accent, 0.10)}, rgba(16,29,23,0.96))`,
+        border: `1px solid ${withAlpha(accent, 0.35)}`,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -153,7 +175,7 @@ export default function Dashboard({ players, groups, fixtures, knockoutBracket, 
         ...panelStyle(),
         padding: 24,
         background: `
-          radial-gradient(circle at top right, color-mix(in srgb, ${phase.color} 18%, transparent) 0%, transparent 30%),
+          radial-gradient(circle at top right, ${withAlpha(phase.color, 0.18)} 0%, transparent 30%),
           radial-gradient(circle at bottom left, rgba(212,175,55,0.06) 0%, transparent 25%),
           linear-gradient(135deg, rgba(13,24,19,0.98), rgba(7,17,12,0.98))
         `,
@@ -163,8 +185,8 @@ export default function Dashboard({ players, groups, fixtures, knockoutBracket, 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
               <div style={{
                 padding: '7px 14px', borderRadius: 999,
-                border: `1px solid color-mix(in srgb, ${phase.color} 40%, transparent)`,
-                background: `color-mix(in srgb, ${phase.color} 12%, transparent)`,
+                border: `1px solid ${withAlpha(phase.color, 0.40)}`,
+                background: withAlpha(phase.color, 0.12),
                 fontFamily: 'Barlow Condensed', fontWeight: 700, letterSpacing: 1.8, fontSize: 14, color: phase.color,
               }}>
                 {phase.label}
@@ -328,7 +350,7 @@ export default function Dashboard({ players, groups, fixtures, knockoutBracket, 
                     <div style={{
                       width: `${(p.Pts / maxPts) * 100}%`,
                       height: '100%',
-                      background: idx === 0 ? 'linear-gradient(90deg, var(--gold-dim), var(--gold))' : 'linear-gradient(90deg, var(--card-green), color-mix(in srgb, var(--card-green) 60%, white))',
+                      background: idx === 0 ? 'linear-gradient(90deg, var(--gold-dim), var(--gold))' : `linear-gradient(90deg, var(--card-green), ${withAlpha('var(--card-green)', 0.6)})`,
                     }} />
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'right' }}>
