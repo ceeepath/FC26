@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function Settings({ settings, setSettings, onLogout }) {
+export default function Settings({ settings, setSettings, onLogout, onResetAll }) {
   const [newPass, setNewPass] = useState('')
   const [confirmPass, setConfirmPass] = useState('')
   const [passMsg, setPassMsg] = useState('')
@@ -126,6 +126,22 @@ export default function Settings({ settings, setSettings, onLogout }) {
           End the current admin session on this device.
         </p>
         <button className="btn-danger" onClick={onLogout}>Logout</button>
+      </div>
+
+      <div className="card" style={{ padding: 24, border: '1px solid rgba(179,92,92,0.25)' }}>
+        <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 6, color: 'var(--danger)' }}>Reset Competition</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 14 }}>
+          Wipe all data — players, groups, fixtures, results — and return to the format selection screen to start fresh. <strong style={{ color: 'var(--text-primary)' }}>This cannot be undone.</strong>
+        </p>
+        <button className="btn-danger" onClick={() => {
+          if (window.confirm('Reset everything and start a new competition? All data will be deleted. This cannot be undone.')) {
+            if (window.confirm('Are you absolutely sure? All players, groups, fixtures and results will be lost.')) {
+              onResetAll?.()
+            }
+          }
+        }}>
+          🗑️ Reset Everything &amp; Start Over
+        </button>
       </div>
     </div>
   )

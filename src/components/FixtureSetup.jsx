@@ -208,7 +208,7 @@ export default function FixtureSetup({
   players, groups, fixtures, setFixtures,
   fixtureConfig, setFixtureConfig,
   fixturesLocked, setFixturesLocked,
-  openResultEntry, isAdmin,
+  openResultEntry, isAdmin, isLeague,
 }) {
   const [view, setView] = useState('group')
   const [editingId, setEditingId] = useState(null)
@@ -246,32 +246,52 @@ export default function FixtureSetup({
 
   function generateGroupFixtures() {
     const resultsEntered = fixtures.filter(f => f.played).length
+    const label = isLeague ? 'league' : 'group stage'
     const msg = resultsEntered > 0
       ? `⚠️ ${resultsEntered} result${resultsEntered !== 1 ? 's have' : ' has'} already been entered. Regenerating will delete them. Continue?`
-      : 'Generate group stage fixtures now?'
+      : `Generate ${label} fixtures now?`
     if (!window.confirm(msg)) return
 
     const newFixtures = []
-    groups.forEach(group => {
-      const validIds = group.playerIds.filter(id => players.some(p => p.id === id))
-      const pairs = roundRobin(validIds).sort(() => Math.random() - 0.5)
-      const legs = fixtureConfig.group === 2 ? 2 : 1
+    const legs = fixtureConfig.group === 2 ? 2 : 1
 
+    if (isLeague) {
+      // League: all players in one pool, no groups
+      const pairs = roundRobin(players.map(p => p.id)).sort(() => Math.random() - 0.5)
       pairs.forEach((pair, pairIdx) => {
         newFixtures.push({
-          id: generateId(), type: 'group', groupId: group.id,
+          id: generateId(), type: 'group', groupId: 'league',
           leg: 1, homeId: pair[0], awayId: pair[1],
           homeScore: null, awayScore: null, played: false, pairIdx,
         })
         if (legs === 2) {
           newFixtures.push({
-            id: generateId(), type: 'group', groupId: group.id,
+            id: generateId(), type: 'group', groupId: 'league',
             leg: 2, homeId: pair[1], awayId: pair[0],
             homeScore: null, awayScore: null, played: false, pairIdx,
           })
         }
       })
-    })
+    } else {
+      groups.forEach(group => {
+        const validIds = group.playerIds.filter(id => players.some(p => p.id === id))
+        const pairs = roundRobin(validIds).sort(() => Math.random() - 0.5)
+        pairs.forEach((pair, pairIdx) => {
+          newFixtures.push({
+            id: generateId(), type: 'group', groupId: group.id,
+            leg: 1, homeId: pair[0], awayId: pair[1],
+            homeScore: null, awayScore: null, played: false, pairIdx,
+          })
+          if (legs === 2) {
+            newFixtures.push({
+              id: generateId(), type: 'group', groupId: group.id,
+              leg: 2, homeId: pair[1], awayId: pair[0],
+              homeScore: null, awayScore: null, played: false, pairIdx,
+            })
+          }
+        })
+      })
+    }
 
     setFixtures(newFixtures)
     setFixturesLocked(false)
@@ -295,13 +315,18 @@ export default function FixtureSetup({
     setFixturesLocked(false)
   }
 
-  const fixturesByGroup = useMemo(() => groups.map(group => ({
+  // In league mode, treat all players as a single "group"
+  const effectiveGroups = isLeague
+    ? [{ id: 'league', name: 'League', colorIdx: 0, playerIds: players.map(p => p.id) }]
+    : groups
+
+  const fixturesByGroup = useMemo(() => effectiveGroups.map(group => ({
     group,
     color: GROUP_COLORS[group.colorIdx % GROUP_COLORS.length],
     leg1: groupFixtures.filter(f => f.groupId === group.id && f.leg === 1),
     leg2: groupFixtures.filter(f => f.groupId === group.id && f.leg === 2),
     all: groupFixtures.filter(f => f.groupId === group.id),
-  })), [groups, groupFixtures])
+  })), [effectiveGroups, groupFixtures])
 
   const maxPerGroup = Math.max(0, ...fixturesByGroup.map(g => g.all.length))
   const rounds = Array.from({ length: maxPerGroup }, (_, i) => ({
@@ -313,8 +338,10 @@ export default function FixtureSetup({
 
   const generatedGroups = fixturesByGroup.filter(g => g.all.length > 0).length
   const progressPct = totalFixtures ? Math.round((playedFixtures / totalFixtures) * 100) : 0
-  const previewSummary = groups.map(g => {
-    const n = g.playerIds.filter(id => players.some(p => p.id === id)).length
+  const previewSummary = effectiveGroups.map(g => {
+    const n = isLeague
+      ? players.length
+      : g.playerIds.filter(id => players.some(p => p.id === id)).length
     const matches = ((n * (n - 1)) / 2) * (fixtureConfig.group === 2 ? 2 : 1)
     return { name: g.name, players: n, matches }
   })
@@ -333,10 +360,12 @@ export default function FixtureSetup({
         <div style={{ position: 'absolute', right: -40, top: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,215,0,0.08)', filter: 'blur(18px)' }} />
         <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) minmax(300px, 0.9fr)', gap: 18 }}>
           <div>
-            <p style={{ color: 'var(--gold)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>Stage 03 · Fixtures & Results</p>
-            <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 42, letterSpacing: 2, color: 'var(--text-primary)', lineHeight: 1, marginBottom: 10 }}>MATCH CONTROL CENTER</h2>
+            <p style={{ color: 'var(--gold)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>{isLeague ? 'League · Fixtures & Results' : 'Stage 03 · Fixtures & Results'}</p>
+            <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 42, letterSpacing: 2, color: 'var(--text-primary)', lineHeight: 1, marginBottom: 10 }}>{isLeague ? 'LEAGUE MATCH CENTER' : 'MATCH CONTROL CENTER'}</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 620, lineHeight: 1.6 }}>
-              Set the number of legs, generate the full group schedule, and enter scores in a cleaner matchday-style layout.
+              {isLeague
+                ? 'Set the number of legs, generate the full league schedule, and enter scores as matches are played.'
+                : 'Set the number of legs, generate the full group schedule, and enter scores in a cleaner matchday-style layout.'}
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginTop: 18 }}>

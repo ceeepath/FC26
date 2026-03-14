@@ -141,7 +141,12 @@ function StatCard({ label, value, sub, accent = 'var(--gold)' }) {
   )
 }
 
-export default function GroupStandings({ players, groups, fixtures, qualifierConfig, setQualifierConfig, isAdmin }) {
+export default function GroupStandings({ players, groups, fixtures, qualifierConfig, setQualifierConfig, isAdmin, isLeague }) {
+  // In league mode, treat all players as one group
+  const effectiveGroups = isLeague
+    ? [{ id: 'league', name: 'League Table', colorIdx: 0, playerIds: players.map(p => p.id) }]
+    : groups
+
   const groupFixtures = fixtures.filter(f => f.type === 'group')
   const playedCount = groupFixtures.filter(f => f.played).length
   const totalCount = groupFixtures.length
@@ -164,7 +169,7 @@ export default function GroupStandings({ players, groups, fixtures, qualifierCon
     setQualifierConfig(prev => ({ ...prev, bestLosers: val }))
   }
 
-  const allGroupData = groups.map(group => ({
+  const allGroupData = effectiveGroups.map(group => ({
     group,
     color: GROUP_COLORS[group.colorIdx % GROUP_COLORS.length],
     rows: calcStandings(group, players, fixtures),
@@ -230,41 +235,56 @@ export default function GroupStandings({ players, groups, fixtures, qualifierCon
             </div>
 
             <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 40, letterSpacing: 2.5, color: 'var(--gold)', lineHeight: 1, marginBottom: 10 }}>
-              Group Standings
+              {isLeague ? 'League Table' : 'Group Standings'}
             </h2>
             <p style={{ color: 'var(--text-primary)', fontSize: 15, maxWidth: 650, lineHeight: 1.6, marginBottom: 18 }}>
-              Track every group like a proper tournament table. Rankings update automatically from match results, while qualification slots and wildcard spots give you a clean path into the knockout stage.
+              {isLeague
+                ? 'Full league standings — everyone plays everyone. Final table position decides the champion. Rankings update automatically from match results.'
+                : 'Track every group like a proper tournament table. Rankings update automatically from match results, while qualification slots and wildcard spots give you a clean path into the knockout stage.'}
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
-              <span style={{
-                padding: '8px 12px', borderRadius: 999,
-                border: '1px solid rgba(76,175,80,0.25)',
-                background: 'rgba(76,175,80,0.08)', color: '#7ee08a', fontSize: 12, fontWeight: 700,
-              }}>
-                ✅ Direct qualifiers highlighted
-              </span>
-              {bestLosers > 0 && (
+              {!isLeague && (
+                <>
+                  <span style={{
+                    padding: '8px 12px', borderRadius: 999,
+                    border: '1px solid rgba(76,175,80,0.25)',
+                    background: 'rgba(76,175,80,0.08)', color: '#7ee08a', fontSize: 12, fontWeight: 700,
+                  }}>
+                    ✅ Direct qualifiers highlighted
+                  </span>
+                  {bestLosers > 0 && (
+                    <span style={{
+                      padding: '8px 12px', borderRadius: 999,
+                      border: '1px solid rgba(120,120,255,0.28)',
+                      background: 'rgba(120,120,255,0.08)', color: '#a8a8ff', fontSize: 12, fontWeight: 700,
+                    }}>
+                      🃏 Wildcard race active
+                    </span>
+                  )}
+                  <span style={{
+                    padding: '8px 12px', borderRadius: 999,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700,
+                  }}>
+                    {groups.length} group{groups.length !== 1 ? 's' : ''} in play
+                  </span>
+                </>
+              )}
+              {isLeague && (
                 <span style={{
                   padding: '8px 12px', borderRadius: 999,
-                  border: '1px solid rgba(120,120,255,0.28)',
-                  background: 'rgba(120,120,255,0.08)', color: '#a8a8ff', fontSize: 12, fontWeight: 700,
+                  border: '1px solid rgba(109,140,166,0.28)',
+                  background: 'rgba(109,140,166,0.08)', color: 'var(--card-blue)', fontSize: 12, fontWeight: 700,
                 }}>
-                  🃏 Wildcard race active
+                  🏅 {players.length} players · full round robin
                 </span>
               )}
-              <span style={{
-                padding: '8px 12px', borderRadius: 999,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700,
-              }}>
-                {groups.length} group{groups.length !== 1 ? 's' : ''} in play
-              </span>
             </div>
 
             <div style={{ maxWidth: 720 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                <span>Group stage progress</span>
+                <span>{isLeague ? 'League progress' : 'Group stage progress'}</span>
                 <span>{playedCount}/{totalCount} matches played</span>
               </div>
               <div style={{ height: 12, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -280,6 +300,7 @@ export default function GroupStandings({ players, groups, fixtures, qualifierCon
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 220 }}>
+            {!isLeague && (
             <div style={{
               padding: 16,
               borderRadius: 16,
@@ -296,6 +317,7 @@ export default function GroupStandings({ players, groups, fixtures, qualifierCon
                 {directQualifierCount} direct + {wildcardAdvancers.length} wildcard
               </div>
             </div>
+            )}
 
             <CopyButton text={exportGroupStandings(groups, players, fixtures, qualifierConfig)} label="📋 Copy Standings" />
           </div>
@@ -305,11 +327,11 @@ export default function GroupStandings({ players, groups, fixtures, qualifierCon
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 24 }}>
         <StatCard label="Matches played" value={playedCount} sub={`${remainingCount} remaining`} />
         <StatCard label="Completion" value={`${completionPct}%`} sub={totalCount ? 'Based on entered results' : 'No fixtures yet'} accent="#7ee08a" />
-        <StatCard label="Groups settled" value={completedGroups} sub={`${groups.length - completedGroups} still active`} accent="#6aaeff" />
-        <StatCard label="Wildcard spots" value={bestLosers} sub={bestLosers ? 'Extra qualification enabled' : 'No wildcards set'} accent="#a8a8ff" />
+        {!isLeague && <StatCard label="Groups settled" value={completedGroups} sub={`${groups.length - completedGroups} still active`} accent="#6aaeff" />}
+        {!isLeague && <StatCard label="Wildcard spots" value={bestLosers} sub={bestLosers ? 'Extra qualification enabled' : 'No wildcards set'} accent="#a8a8ff" />}
       </div>
 
-      {isAdmin && (
+      {isAdmin && !isLeague && (
         <div className="card" style={{ padding: 22, marginBottom: 24, borderRadius: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>
             <div>
@@ -558,7 +580,7 @@ export default function GroupStandings({ players, groups, fixtures, qualifierCon
         })}
       </div>
 
-      {bestLosers > 0 && loserPool.length > 0 && (
+      {!isLeague && bestLosers > 0 && loserPool.length > 0 && (
         <div style={{ marginTop: 30 }}>
           <div style={{ marginBottom: 14 }}>
             <h3 style={{ fontFamily: 'Bebas Neue', fontSize: 28, color: '#b6b6ff', letterSpacing: 2, marginBottom: 6 }}>

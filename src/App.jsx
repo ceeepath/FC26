@@ -4,10 +4,11 @@ import GroupSetup from './components/GroupSetup'
 import FixtureSetup from './components/FixtureSetup'
 import GroupStandings from './components/GroupStandings'
 import KnockoutBracket from './components/KnockoutBracket'
-import Leaderboard from './components/LeaderBoard'
+import Leaderboard from './components/Leaderboard'
 import WhatsAppExport from './components/WhatsAppExport'
 import Dashboard from './components/Dashboard'
 import Sidebar from './components/Sidebar'
+import FormatSetup from './components/FormatSetup'
 import Settings from './components/Settings'
 import AdminLogin from './components/AdminLogin'
 import { load, save, KEYS } from './utils/storage'
@@ -63,6 +64,7 @@ export default function App() {
   const [qualifierConfig, setQualifierConfig] = useState(() => load(KEYS.QUALIFIER_CONFIG, { perGroup: {}, bestLosers: 0 }))
   const [knockoutBracket, setKnockoutBracket] = useState(() => load(KEYS.KNOCKOUT_BRACKET, DEFAULT_KNOCKOUT))
   const [settings, setSettings] = useState(() => load(KEYS.SETTINGS, DEFAULT_SETTINGS))
+  const [tournamentFormat, setTournamentFormat] = useState(() => load(KEYS.TOURNAMENT_FORMAT, null))
   const [isAdmin, setIsAdmin] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -83,6 +85,7 @@ export default function App() {
   useEffect(() => { save(KEYS.FIXTURES_LOCKED, fixturesLocked) }, [fixturesLocked])
   useEffect(() => { save(KEYS.QUALIFIER_CONFIG, qualifierConfig) }, [qualifierConfig])
   useEffect(() => { save(KEYS.KNOCKOUT_BRACKET, knockoutBracket) }, [knockoutBracket])
+  useEffect(() => { save(KEYS.TOURNAMENT_FORMAT, tournamentFormat) }, [tournamentFormat])
   useEffect(() => { save(KEYS.SETTINGS, settings) }, [settings])
 
   const fixturesGenerated = fixtures.length > 0
@@ -90,16 +93,26 @@ export default function App() {
   const knockoutStarted = fixtures.some(f => f.type === 'knockout')
   const phaseLabel = getPhaseLabel({ players, groupsLocked, fixturesGenerated, knockoutBracket })
 
-  const TABS = [
-    { id: 'dashboard', label: 'Dashboard', icon: '⚡' },
-    { id: 'players', label: 'Players', icon: '⚽' },
-    { id: 'groups', label: 'Groups', icon: '📋' },
-    { id: 'fixtures', label: 'Fixtures', icon: '📅', locked: !groupsLocked },
-    { id: 'standings', label: 'Standings', icon: '📊', locked: !fixturesGenerated },
-    { id: 'knockout', label: 'Knockout', icon: '🏆', locked: !fixturesGenerated },
-    { id: 'scorers', label: 'Leaderboard', icon: '🏅', locked: !fixturesGenerated },
-    { id: 'export', label: 'Export', icon: '📤', locked: !fixturesGenerated },
-    { id: 'settings', label: 'Settings', icon: '⚙️', adminOnly: true },
+  const isLeague = tournamentFormat === 'league'
+
+  const TABS = isLeague ? [
+    { id: 'dashboard', label: 'Dashboard',   icon: '⚡' },
+    { id: 'players',   label: 'Players',     icon: '⚽' },
+    { id: 'fixtures',  label: 'Fixtures',    icon: '📅', locked: players.length < 2 },
+    { id: 'standings', label: 'League Table', icon: '📊', locked: !fixturesGenerated },
+    { id: 'scorers',   label: 'Leaderboard', icon: '🏅', locked: !fixturesGenerated },
+    { id: 'export',    label: 'Export',      icon: '📤', locked: !fixturesGenerated },
+    { id: 'settings',  label: 'Settings',    icon: '⚙️', adminOnly: true },
+  ] : [
+    { id: 'dashboard', label: 'Dashboard',   icon: '⚡' },
+    { id: 'players',   label: 'Players',     icon: '⚽' },
+    { id: 'groups',    label: 'Groups',      icon: '📋' },
+    { id: 'fixtures',  label: 'Fixtures',    icon: '📅', locked: !groupsLocked },
+    { id: 'standings', label: 'Standings',   icon: '📊', locked: !fixturesGenerated },
+    { id: 'knockout',  label: 'Knockout',    icon: '🏆', locked: !fixturesGenerated },
+    { id: 'scorers',   label: 'Leaderboard', icon: '🏅', locked: !fixturesGenerated },
+    { id: 'export',    label: 'Export',      icon: '📤', locked: !fixturesGenerated },
+    { id: 'settings',  label: 'Settings',    icon: '⚙️', adminOnly: true },
   ]
 
   const activeMeta = TABS.find(t => t.id === activeTab) ?? TABS[0]
@@ -124,6 +137,23 @@ export default function App() {
     setActiveTab('dashboard')
   }
 
+  function handleResetAll() {
+    // Clear all localStorage keys
+    Object.values(KEYS).forEach(k => localStorage.removeItem(k))
+    // Reset all state
+    setPlayers([])
+    setGroups([])
+    setGroupsLocked(false)
+    setFixtures([])
+    setFixtureConfig(DEFAULT_FIXTURE_CONFIG)
+    setFixturesLocked(false)
+    setQualifierConfig({ perGroup: {}, bestLosers: 0 })
+    setKnockoutBracket(DEFAULT_KNOCKOUT)
+    setTournamentFormat(null)
+    setIsAdmin(false)
+    setActiveTab('dashboard')
+  }
+
   const sidebarStats = {
     phase: phaseLabel,
     players: players.length,
@@ -132,6 +162,11 @@ export default function App() {
     groupsLocked,
     fixturesGenerated,
     knockoutStarted,
+  }
+
+  // ── Show format picker if not yet chosen ──
+  if (!tournamentFormat) {
+    return <FormatSetup onSelect={fmt => setTournamentFormat(fmt)} />
   }
 
   return (
@@ -333,6 +368,7 @@ export default function App() {
                 setFixturesLocked={setFixturesLocked}
                 openResultEntry={settings.openResultEntry}
                 isAdmin={isAdmin}
+                isLeague={isLeague}
               />
             )}
 
@@ -344,6 +380,7 @@ export default function App() {
                 qualifierConfig={qualifierConfig}
                 setQualifierConfig={setQualifierConfig}
                 isAdmin={isAdmin}
+                isLeague={isLeague}
               />
             )}
 
@@ -382,6 +419,7 @@ export default function App() {
                 settings={settings}
                 setSettings={setSettings}
                 onLogout={handleLogout}
+                onResetAll={handleResetAll}
               />
             )}
           </div>

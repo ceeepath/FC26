@@ -7,6 +7,7 @@ export const KEYS = {
   FIXTURES_LOCKED: 'ea26_fixtures_locked',
   QUALIFIER_CONFIG: 'ea26_qualifier_config',
   KNOCKOUT_BRACKET: 'ea26_knockout_bracket',
+  TOURNAMENT_FORMAT: 'ea26_tournament_format',
   SETTINGS: 'ea26_settings',
 }
 
