@@ -171,9 +171,16 @@ function GroupCard({ group, players, groupsLocked, isAdmin, onRemoveGroup, onRem
               }}>
                 {idx + 1}
               </div>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {player.name}
-              </span>
+              <div style={{ overflow: 'hidden', minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {player.name}
+                </div>
+                {player.gameId && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {player.gameId}
+                  </div>
+                )}
+              </div>
             </div>
             {isAdmin && !groupsLocked ? (
               <button

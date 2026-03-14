@@ -127,7 +127,7 @@ function ScoreEntry({ fixture, playerName, onSave, onCancel }) {
   )
 }
 
-function FixtureCard({ fixture, idx, groupName, color, playerName, canEnter, canEdit, editingId, onEdit, onSave, onCancel, legLabel }) {
+function FixtureCard({ fixture, idx, groupName, color, playerName, playerGameId, canEnter, canEdit, editingId, onEdit, onSave, onCancel, legLabel }) {
   const isEditing = editingId === fixture.id
   const clickable = fixture.played ? canEdit : canEnter
 
@@ -160,6 +160,7 @@ function FixtureCard({ fixture, idx, groupName, color, playerName, canEnter, can
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{playerName(fixture.homeId)}</div>
+            {playerGameId(fixture.homeId) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{playerGameId(fixture.homeId)}</div>}
             <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Home</div>
           </div>
 
@@ -182,6 +183,7 @@ function FixtureCard({ fixture, idx, groupName, color, playerName, canEnter, can
 
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{playerName(fixture.awayId)}</div>
+            {playerGameId(fixture.awayId) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{playerGameId(fixture.awayId)}</div>}
             <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Away</div>
           </div>
         </div>
@@ -231,6 +233,9 @@ export default function FixtureSetup({
 
   function playerName(id) {
     return players.find(p => p.id === id)?.name ?? '???'
+  }
+  function playerGameId(id) {
+    return players.find(p => p.id === id)?.gameId ?? ''
   }
 
   function setLeg(stage, value) {

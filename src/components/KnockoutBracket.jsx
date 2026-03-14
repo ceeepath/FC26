@@ -495,7 +495,10 @@ export default function KnockoutBracket({
           }}
         >
           {legLabel && <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 38, fontFamily: 'Bebas Neue', letterSpacing: 1.2 }}>{legLabel}</span>}
-          <span style={{ flex: 1, fontWeight: 700, fontSize: 14, textAlign: 'right' }}>{playerName(fixture.homeId)}</span>
+          <div style={{ flex: 1, textAlign: 'right' }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>{playerName(fixture.homeId)}</div>
+            {playerGameId(fixture.homeId) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{playerGameId(fixture.homeId)}</div>}
+          </div>
           <div style={{
             padding: '6px 12px', minWidth: 74, textAlign: 'center', borderRadius: 8,
             background: fixture.played ? 'rgba(163, 217, 84, 0.10)' : canEnter ? 'rgba(245,197,24,0.08)' : 'rgba(255,255,255,0.02)',
@@ -505,7 +508,10 @@ export default function KnockoutBracket({
               ? <span style={{ fontFamily: 'Bebas Neue', fontSize: 18, color: '#d7f26e', letterSpacing: 2 }}>{fixture.homeScore} – {fixture.awayScore}</span>
               : <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, color: canEnter ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: 1 }}>VS</span>}
           </div>
-          <span style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>{playerName(fixture.awayId)}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>{playerName(fixture.awayId)}</div>
+            {playerGameId(fixture.awayId) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{playerGameId(fixture.awayId)}</div>}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             {fixture.played && canEdit && <span style={{ fontSize: 11, opacity: 0.45 }}>✏️</span>}
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: fixture.played ? '#8bd450' : 'rgba(255,255,255,0.18)' }} />
@@ -734,7 +740,10 @@ export default function KnockoutBracket({
                         <span style={{ width: 34, height: 34, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bebas Neue', fontSize: 19, color: isSelected ? 'var(--gold)' : 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
                           {idx + 1}
                         </span>
-                        <span style={{ fontWeight: 700, fontSize: 14, textAlign: 'left', flex: 1 }}>{playerName(playerId)}</span>
+                        <div style={{ flex: 1, textAlign: 'left' }}>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{playerName(playerId)}</div>
+                          {playerGameId(playerId) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{playerGameId(playerId)}</div>}
+                        </div>
                       </button>
                     )
                   })}
@@ -746,9 +755,15 @@ export default function KnockoutBracket({
                     {previewPairs.map((pair, idx) => (
                       <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'rgba(0,0,0,0.14)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)' }}>
                         <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, color: 'var(--text-muted)', minWidth: 24 }}>{idx + 1}</span>
-                        <span style={{ flex: 1, textAlign: 'right', fontWeight: 700, fontSize: 14 }}>{playerName(pair.p1)}</span>
+                        <div style={{ flex: 1, textAlign: 'right' }}>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{playerName(pair.p1)}</div>
+                          {playerGameId(pair.p1) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{playerGameId(pair.p1)}</div>}
+                        </div>
                         <span style={{ fontFamily: 'Bebas Neue', fontSize: 12, color: 'var(--gold)', padding: '4px 9px', border: '1px solid rgba(245,197,24,0.25)', borderRadius: 999 }}>VS</span>
-                        <span style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>{pair.p2 === 'BYE' ? <em style={{ color: 'var(--text-muted)' }}>BYE</em> : playerName(pair.p2)}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{pair.p2 === 'BYE' ? <em style={{ color: 'var(--text-muted)' }}>BYE</em> : playerName(pair.p2)}</div>
+                          {pair.p2 !== 'BYE' && playerGameId(pair.p2) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{playerGameId(pair.p2)}</div>}
+                        </div>
                       </div>
                     ))}
                   </div>

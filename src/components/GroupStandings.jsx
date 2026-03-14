@@ -39,7 +39,8 @@ function calcStandings(group, players, fixtures) {
       }
     })
 
-    return { id, name, P, W, D, L, GF, GA, GD: GF - GA, Pts: W * 3 + D }
+    const gameId = players.find(p => p.id === id)?.gameId ?? ''
+    return { id, name, gameId, P, W, D, L, GF, GA, GD: GF - GA, Pts: W * 3 + D }
   })
 
   rows.sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || a.name.localeCompare(b.name))
@@ -537,7 +538,10 @@ export default function GroupStandings({ players, groups, fixtures, qualifierCon
                               }}>
                                 {isLeader ? '👑' : isDirect ? '✅' : isWildcard ? '🃏' : '•'}
                               </span>
-                              <span>{row.name}</span>
+                              <div>
+                                <span style={{ fontWeight: 700 }}>{row.name}</span>
+                                {row.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{row.gameId}</div>}
+                              </div>
                             </div>
                           </td>
                           <td style={tdStyle()}>{row.P}</td>
@@ -632,7 +636,10 @@ export default function GroupStandings({ players, groups, fixtures, qualifierCon
                         <td style={{ ...tdStyle('left'), fontWeight: 700 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             {isIn && <span>🃏</span>}
-                            <span>{row.name}</span>
+                            <div>
+                              <div style={{ fontWeight: 700 }}>{row.name}</div>
+                              {row.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{row.gameId}</div>}
+                            </div>
                           </div>
                         </td>
                         <td style={tdStyle('left')}>
