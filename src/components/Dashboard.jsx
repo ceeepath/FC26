@@ -126,9 +126,10 @@ function PodiumCard({ player, index }) {
       </div>
 
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontFamily: 'Bebas Neue', fontSize: index === 0 ? 28 : 22, letterSpacing: 1.4, color: palette.text, marginBottom: 6 }}>
+        <div style={{ fontFamily: 'Bebas Neue', fontSize: index === 0 ? 28 : 22, letterSpacing: 1.4, color: palette.text, lineHeight: 1.1 }}>
           {player.name}
         </div>
+        {player.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, marginBottom: 4 }}>{player.gameId}</div>}
         <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
           {player.W} wins · {player.D} draws · {player.L} losses
         </div>
@@ -200,8 +201,11 @@ function RaceCard({ player, index, maxPts, maxGoals }) {
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {player.name}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {player.name}
+              </div>
+              {player.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{player.gameId}</div>}
             </div>
             <div style={{ fontFamily: 'Bebas Neue', fontSize: 24, color: isTop ? 'var(--gold)' : 'var(--text-primary)', letterSpacing: 1 }}>
               {player.Pts}
@@ -396,7 +400,8 @@ export default function Leaderboard({ players, fixtures }) {
                   }}>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{MEDAL[idx]} Rank {idx + 1}</div>
                     <div style={{ fontWeight: 700 }}>{p.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.Pts} pts · {p.GF} GF</div>
+                    {p.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{p.gameId}</div>}
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{p.Pts} pts · {p.GF} GF</div>
                   </div>
                 ))}
                 {board.length === 0 && (
@@ -607,7 +612,10 @@ export default function Leaderboard({ players, fixtures }) {
                                 background: isLeader ? 'var(--gold)' : index < 3 ? '#8fd38d' : 'rgba(255,255,255,0.18)',
                                 boxShadow: isLeader ? '0 0 10px rgba(245,197,24,0.45)' : 'none',
                               }} />
-                              <span>{player.name}</span>
+                              <div>
+                                <div style={{ fontWeight: 700 }}>{player.name}</div>
+                                {player.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{player.gameId}</div>}
+                              </div>
                             </div>
                           </TableCell>
 

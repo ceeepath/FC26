@@ -10,6 +10,7 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
   const [search,     setSearch]     = useState('')
   const [feedback,   setFeedback]   = useState({ msg: '', ok: true })
 
+  const [selected,      setSelected]      = useState(new Set())
   const [showImport,    setShowImport]    = useState(false)
   const [importText,    setImportText]    = useState('')
   const [importPreview, setImportPreview] = useState([])
@@ -55,6 +56,30 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
     if (!window.confirm(`Remove ${name} from the tournament?`)) return
     setPlayers(prev => prev.filter(p => p.id !== id))
     flash(`🗑️ ${name} removed.`)
+  }
+
+  function toggleSelect(id) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === filtered.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(filtered.map(p => p.id)))
+    }
+  }
+
+  function deleteSelected() {
+    if (selected.size === 0) return
+    if (!window.confirm(`Delete ${selected.size} player${selected.size !== 1 ? 's' : ''}? This cannot be undone.`)) return
+    setPlayers(prev => prev.filter(p => !selected.has(p.id)))
+    flash(`🗑️ ${selected.size} player${selected.size !== 1 ? 's' : ''} removed.`)
+    setSelected(new Set())
   }
 
   function parseLines(text) {
@@ -260,6 +285,51 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
         />
       )}
 
+      {/* Bulk select toolbar — admin only, shown when there are players */}
+      {isAdmin && filtered.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          marginBottom: 8, flexWrap: 'wrap',
+        }}>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)',
+            userSelect: 'none',
+          }}>
+            <input
+              type="checkbox"
+              checked={selected.size > 0 && selected.size === filtered.length}
+              ref={el => { if (el) el.indeterminate = selected.size > 0 && selected.size < filtered.length }}
+              onChange={toggleSelectAll}
+              style={{ width: 15, height: 15, accentColor: 'var(--gold)', cursor: 'pointer' }}
+            />
+            {selected.size === 0
+              ? 'Select all'
+              : `${selected.size} selected`}
+          </label>
+
+          {selected.size > 0 && (
+            <button
+              className="btn-danger"
+              style={{ padding: '5px 14px', fontSize: 13 }}
+              onClick={deleteSelected}
+            >
+              🗑️ Delete {selected.size}
+            </button>
+          )}
+
+          {selected.size > 0 && (
+            <button
+              className="btn-ghost"
+              style={{ padding: '5px 12px', fontSize: 13 }}
+              onClick={() => setSelected(new Set())}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <div className="card" style={{ padding: 40, textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>⚽</div>
@@ -281,6 +351,15 @@ export default function PlayerManagement({ players, setPlayers, isAdmin, minPlay
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a5a2a'; e.currentTarget.style.background = '#0a1a0a' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--green-border)'; e.currentTarget.style.background = 'var(--green-card)' }}
             >
+              {isAdmin && (
+                <input
+                  type="checkbox"
+                  checked={selected.has(player.id)}
+                  onChange={() => toggleSelect(player.id)}
+                  onClick={e => e.stopPropagation()}
+                  style={{ width: 15, height: 15, accentColor: 'var(--gold)', cursor: 'pointer', flexShrink: 0 }}
+                />
+              )}
               <span style={{ fontFamily: 'Bebas Neue', fontSize: 16, color: 'var(--gold-dim)', minWidth: 28, textAlign: 'center', opacity: 0.8 }}>
                 {String(players.indexOf(player) + 1).padStart(2, '0')}
               </span>
