@@ -1,283 +1,158 @@
 import { useState, useEffect } from 'react'
-import { CopyButton } from './WhatsAppExport'
-import { exportLeaderboard } from '../utils/whatsapp'
+// ── Color helper — replaces color-mix() for Safari < 15.4 compatibility ──
+const CSS_VAR_MAP = {
+  'var(--gold)':        '#d4af37',
+  'var(--gold-dim)':    '#b8962e',
+  'var(--card-green)':  '#5d8f6a',
+  'var(--card-blue)':   '#6d8ca6',
+  'var(--card-orange)': '#a67943',
+  'var(--card-teal)':   '#5a8c86',
+  'var(--card-purple)': '#7f6e9e',
+  'var(--text-muted)':  '#8f978f',
+}
 
-const MEDAL = ['🥇', '🥈', '🥉']
+function withAlpha(color, alpha) {
+  const hex = CSS_VAR_MAP[color] ?? color
+  // Parse hex → r,g,b
+  const h = hex.replace('#', '')
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
 
-function calcLeaderboard(players, fixtures) {
+function getPhaseData({ groups, totalGroupFixtures, playedGroupFixtures, knockoutLocked, totalKOFixtures, playedKOFixtures }) {
+  const allGroupDone = totalGroupFixtures > 0 && playedGroupFixtures === totalGroupFixtures
+
+  if (knockoutLocked && playedKOFixtures === totalKOFixtures && totalKOFixtures > 0) {
+    return { label: 'COMPLETE', color: 'var(--gold)', blurb: 'Tournament finished. Crown your champion.' }
+  }
+  if (knockoutLocked) {
+    return { label: 'KNOCKOUT', color: 'var(--gold-dim)', blurb: 'Bracket is live. Advance toward the final.' }
+  }
+  if (allGroupDone) {
+    return { label: 'KNOCKOUT SETUP', color: 'var(--card-orange)', blurb: 'Group stage is done. Seed the bracket next.' }
+  }
+  if (totalGroupFixtures > 0) {
+    return { label: 'GROUP STAGE', color: 'var(--card-green)', blurb: 'Results are coming in. Tables update live.' }
+  }
+  if (groups.length > 0) {
+    return { label: 'GROUP SETUP', color: 'var(--card-blue)', blurb: 'Groups are ready. Generate fixtures when set.' }
+  }
+  return { label: 'REGISTRATION', color: 'var(--text-muted)', blurb: 'Add players to kick off the tournament.' }
+}
+
+function getNextStep({ players, groups, totalGroupFixtures, playedGroupFixtures, knockoutLocked, totalKOFixtures, playedKOFixtures }) {
+  if (players.length === 0) return 'Add players to start building the tournament.'
+  if (groups.length === 0) return 'Create or auto-assign groups for all registered players.'
+  if (totalGroupFixtures === 0) return 'Generate group fixtures to begin match scheduling.'
+  if (playedGroupFixtures < totalGroupFixtures) return 'Enter remaining group results to complete the standings.'
+  if (!knockoutLocked) return 'Lock in qualifiers and generate the knockout bracket.'
+  if (playedKOFixtures < totalKOFixtures) return 'Continue entering knockout results until a champion emerges.'
+  return 'Everything is done. Export results and celebrate the winner.'
+}
+
+function pName(players, id) {
+  if (!id || id === 'BYE') return 'BYE'
+  return players.find(p => p.id === id)?.name ?? '???'
+}
+
+function pGameId(players, id) {
+  if (!id || id === 'BYE') return ''
+  return players.find(p => p.id === id)?.gameId ?? ''
+}
+
+function panelStyle(extra = {}) {
+  return {
+    background: 'linear-gradient(180deg, rgba(16,29,23,0.94), rgba(10,19,15,0.98))',
+    border: '1px solid var(--border-soft)',
+    borderRadius: 18,
+    boxShadow: 'var(--shadow-card)',
+    ...extra,
+  }
+}
+
+function SectionHeader({ title, meta }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      gap: 12, padding: '16px 18px', borderBottom: '1px solid var(--border-soft)',
+    }}>
+      <span style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 18, letterSpacing: 1.6, color: 'var(--gold)' }}>
+        {title}
+      </span>
+      {meta ? <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{meta}</span> : null}
+    </div>
+  )
+}
+
+function StatCard({ icon, label, value, sub, accent = 'var(--gold)' }) {
+  return (
+    <div
+      className="card"
+      style={{
+        padding: 18,
+        borderRadius: 18,
+        background: `linear-gradient(180deg, ${withAlpha(accent, 0.10)}, rgba(16,29,23,0.96))`,
+        border: `1px solid ${withAlpha(accent, 0.35)}`,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1.5 }}>{label}</div>
+        <div style={{
+          width: 38, height: 38, borderRadius: 14,
+          display: 'grid', placeItems: 'center',
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid var(--border-soft)',
+          fontSize: 18,
+        }}>
+          {icon}
+        </div>
+      </div>
+
+      <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 42, lineHeight: 0.95, color: 'var(--text-primary)', marginBottom: 8 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{sub}</div>
+
+      <div style={{
+        marginTop: 18,
+        height: 3,
+        borderRadius: 999,
+        background: `linear-gradient(90deg, ${accent}, transparent)`,
+      }} />
+    </div>
+  )
+}
+
+function miniBoard(players, fixtures) {
   const played = fixtures.filter(f => f.played && !f.isBye)
-
   return players
     .map(player => {
-      let MP = 0, W = 0, D = 0, L = 0, GF = 0, Pts = 0
-
+      let Pts = 0, W = 0, D = 0, L = 0, GF = 0
       played.forEach(f => {
         const isHome = f.homeId === player.id
         const isAway = f.awayId === player.id
         if (!isHome && !isAway) return
-
-        MP++
         const myGoals = isHome ? (f.homeScore ?? 0) : (f.awayScore ?? 0)
         const theirGoals = isHome ? (f.awayScore ?? 0) : (f.homeScore ?? 0)
         GF += myGoals
-
         if (f.manualWinnerId) {
-          if (f.manualWinnerId === player.id) { W++; Pts += 3 }
-          else L++
+          if (f.manualWinnerId === player.id) { W++; Pts += 3 } else L++
         } else {
           if (myGoals > theirGoals) { W++; Pts += 3 }
           else if (myGoals === theirGoals) { D++; Pts += 1 }
           else L++
         }
       })
-
-      const groupPlayed = played.filter(f => f.type === 'group')
-      const knockPlayed = played.filter(f => f.type === 'knockout')
-
-      const groupGoals = groupPlayed.reduce((s, f) =>
-        s + (f.homeId === player.id ? (f.homeScore ?? 0) : f.awayId === player.id ? (f.awayScore ?? 0) : 0)
-      , 0)
-
-      const knockGoals = knockPlayed.reduce((s, f) =>
-        s + (f.homeId === player.id ? (f.homeScore ?? 0) : f.awayId === player.id ? (f.awayScore ?? 0) : 0)
-      , 0)
-
-      const groupPts = groupPlayed.reduce((s, f) => {
-        const isHome = f.homeId === player.id
-        const isAway = f.awayId === player.id
-        if (!isHome && !isAway) return s
-        if (f.manualWinnerId) return s + (f.manualWinnerId === player.id ? 3 : 0)
-
-        const mg = isHome ? (f.homeScore ?? 0) : (f.awayScore ?? 0)
-        const tg = isHome ? (f.awayScore ?? 0) : (f.homeScore ?? 0)
-        return s + (mg > tg ? 3 : mg === tg ? 1 : 0)
-      }, 0)
-
-      const knockPts = Pts - groupPts
-
-      return { ...player, MP, W, D, L, GF, Pts, groupGoals, knockGoals, groupPts, knockPts }
+      return { ...player, Pts, W, D, L, GF }
     })
-    .filter(p => p.MP > 0)
+    .filter(p => p.Pts > 0 || p.GF > 0)
     .sort((a, b) => b.Pts - a.Pts || b.GF - a.GF || a.name.localeCompare(b.name))
+    .slice(0, 3)
 }
 
-function HeroStat({ label, value, sub, accent }) {
-  return (
-    <div className="card" style={{
-      padding: 18,
-      minHeight: 104,
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      background: 'linear-gradient(180deg, rgba(7,26,7,0.95), rgba(5,16,5,0.98))',
-      border: `1px solid ${accent ?? 'var(--green-border)'}`,
-      boxShadow: accent ? `0 0 0 1px ${accent}20 inset, 0 12px 30px rgba(0,0,0,0.22)` : '0 12px 30px rgba(0,0,0,0.18)',
-    }}>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1.6 }}>{label}</div>
-      <div style={{ fontFamily: 'Bebas Neue', fontSize: 34, lineHeight: 1, letterSpacing: 1.2, color: accent ?? 'var(--text-primary)' }}>
-        {value}
-      </div>
-      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{sub}</div>
-    </div>
-  )
-}
-
-function PodiumCard({ player, index }) {
-  const palettes = [
-    { bg: 'linear-gradient(180deg,#2e2507,#120f03)', border: 'var(--gold)', glow: 'rgba(245,197,24,0.18)', text: 'var(--gold)' },
-    { bg: 'linear-gradient(180deg,#18211a,#0a100c)', border: '#8fa29a', glow: 'rgba(160,174,168,0.16)', text: '#d7e0db' },
-    { bg: 'linear-gradient(180deg,#24170d,#100907)', border: '#af7b42', glow: 'rgba(175,123,66,0.16)', text: '#d99a5e' },
-  ]
-  const palette = palettes[index] ?? palettes[2]
-
-  return (
-    <div className="card" style={{
-      padding: 22,
-      borderRadius: 18,
-      background: palette.bg,
-      border: `1px solid ${palette.border}`,
-      boxShadow: `0 18px 40px ${palette.glow}`,
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      <div style={{
-        position: 'absolute',
-        top: -30,
-        right: -10,
-        width: 120,
-        height: 120,
-        borderRadius: '50%',
-        background: `radial-gradient(circle, ${palette.glow}, transparent 65%)`,
-        pointerEvents: 'none',
-      }} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-        <div style={{ fontSize: index === 0 ? 44 : 34 }}>{MEDAL[index]}</div>
-        <div style={{
-          padding: '6px 10px',
-          borderRadius: 999,
-          border: `1px solid ${palette.border}`,
-          fontSize: 11,
-          letterSpacing: 1.4,
-          color: palette.text,
-          background: 'rgba(0,0,0,0.18)',
-        }}>
-          #{index + 1}
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontFamily: 'Bebas Neue', fontSize: index === 0 ? 28 : 22, letterSpacing: 1.4, color: palette.text, lineHeight: 1.1 }}>
-          {player.name}
-        </div>
-        {player.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, marginBottom: 4 }}>{player.gameId}</div>}
-        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-          {player.W} wins · {player.D} draws · {player.L} losses
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 16 }}>
-        <div style={{ fontFamily: 'Bebas Neue', fontSize: index === 0 ? 64 : 50, lineHeight: 0.95, color: palette.text }}>
-          {player.Pts}
-        </div>
-        <div style={{ fontFamily: 'Bebas Neue', fontSize: 15, color: 'var(--text-muted)', letterSpacing: 2 }}>
-          PTS
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 10 }}>
-        {[
-          ['MP', player.MP, 'var(--text-primary)'],
-          ['GF', player.GF, palette.text],
-          ['GRP', player.groupPts, '#8fd38d'],
-          ['KO', player.knockPts, '#7dc4ff'],
-        ].map(([label, value, color]) => (
-          <div key={label} style={{
-            padding: '10px 8px',
-            borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.08)',
-            background: 'rgba(255,255,255,0.03)',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontFamily: 'Bebas Neue', fontSize: 22, color }}>{value}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1.4 }}>{label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function RaceCard({ player, index, maxPts, maxGoals }) {
-  const ptsBar = maxPts > 0 ? (player.Pts / maxPts) * 100 : 0
-  const goalsBar = maxGoals > 0 ? (player.GF / maxGoals) * 100 : 0
-  const isTop = index === 0
-  const isTopThree = index < 3
-
-  return (
-    <div className="card" style={{
-      padding: 16,
-      borderRadius: 16,
-      border: isTop ? '1px solid var(--gold)' : '1px solid var(--green-border)',
-      background: isTop
-        ? 'linear-gradient(180deg, rgba(245,197,24,0.08), rgba(7,20,7,0.94))'
-        : 'linear-gradient(180deg, rgba(7,20,7,0.94), rgba(4,13,4,0.98))',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{
-          width: 44,
-          height: 44,
-          borderRadius: 14,
-          display: 'grid',
-          placeItems: 'center',
-          background: isTopThree ? 'rgba(245,197,24,0.12)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${isTopThree ? 'var(--gold-dim)' : 'var(--green-border)'}`,
-          fontFamily: 'Bebas Neue',
-          fontSize: 18,
-          color: isTopThree ? 'var(--gold)' : 'var(--text-primary)',
-          flexShrink: 0,
-        }}>
-          {index < 3 ? MEDAL[index] : `#${index + 1}`}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {player.name}
-              </div>
-              {player.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{player.gameId}</div>}
-            </div>
-            <div style={{ fontFamily: 'Bebas Neue', fontSize: 24, color: isTop ? 'var(--gold)' : 'var(--text-primary)', letterSpacing: 1 }}>
-              {player.Pts}
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 4 }}>PTS</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 26, fontSize: 10, color: 'var(--gold)', letterSpacing: 1.2 }}>PTS</span>
-              <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                <div style={{ width: `${ptsBar}%`, height: '100%', background: 'linear-gradient(90deg, var(--gold-dim), var(--gold))' }} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 26, fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1.2 }}>GF</span>
-              <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                <div style={{ width: `${goalsBar}%`, height: '100%', background: 'linear-gradient(90deg, #4f8f4f, #89c489)' }} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{
-        marginTop: 12,
-        paddingTop: 12,
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 8,
-      }}>
-        {[
-          ['MP', player.MP],
-          ['W', player.W],
-          ['D', player.D],
-          ['L', player.L],
-          ['GF', player.GF],
-          ['KO', player.knockPts],
-        ].map(([label, value]) => (
-          <div key={label} style={{
-            padding: '5px 8px',
-            borderRadius: 999,
-            fontSize: 11,
-            color: 'var(--text-muted)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            background: 'rgba(255,255,255,0.03)',
-          }}>
-            <strong style={{ color: 'var(--text-primary)' }}>{value}</strong> {label}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function TableCell({ children, align = 'left', muted = false, strong = false, color }) {
-  return (
-    <td style={{
-      padding: '14px 12px',
-      textAlign: align,
-      fontSize: 13,
-      color: color ?? (muted ? 'var(--text-muted)' : 'var(--text-primary)'),
-      fontWeight: strong ? 700 : 500,
-      whiteSpace: 'nowrap',
-    }}>
-      {children}
-    </td>
-  )
-}
-
-export default function Leaderboard({ players, fixtures }) {
+export default function Dashboard({ players, groups, fixtures, knockoutBracket, qualifierConfig }) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768)
@@ -285,377 +160,230 @@ export default function Leaderboard({ players, fixtures }) {
     return () => window.removeEventListener('resize', fn)
   }, [])
 
-  const board = calcLeaderboard(players, fixtures)
-  const played = fixtures.filter(f => f.played && !f.isBye)
-  const groupPlayed = played.filter(f => f.type === 'group')
-  const knockoutPlayed = played.filter(f => f.type === 'knockout')
-  const top = board[0]
-  const avgGoals = played.length ? (played.reduce((s, f) => s + (f.homeScore ?? 0) + (f.awayScore ?? 0), 0) / played.length).toFixed(1) : '0.0'
-  const maxPts = top?.Pts ?? 0
-  const maxGoals = Math.max(...board.map(p => p.GF), 0)
+  const groupFixtures = fixtures.filter(f => f.type === 'group')
+  const knockoutFixtures = fixtures.filter(f => f.type === 'knockout')
+  const playedGroupFixtures = groupFixtures.filter(f => f.played).length
+  const totalGroupFixtures = groupFixtures.length
+  const playedKOFixtures = knockoutFixtures.filter(f => f.played).length
+  const totalKOFixtures = knockoutFixtures.length
+  const playedFixtures = fixtures.filter(f => f.played && !f.isBye).length
+  const knockoutLocked = !!knockoutBracket?.locked
+
+  const qualifiedCount =
+    Object.values(qualifierConfig?.perGroup ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0) +
+    (qualifierConfig?.bestLosers ?? 0)
+
+  const phase = getPhaseData({ groups, totalGroupFixtures, playedGroupFixtures, knockoutLocked, totalKOFixtures, playedKOFixtures })
+  const nextStep = getNextStep({ players, groups, totalGroupFixtures, playedGroupFixtures, knockoutLocked, totalKOFixtures, playedKOFixtures })
+
+  const totalPossible = totalGroupFixtures + totalKOFixtures
+  const completion = totalPossible > 0 ? Math.round(((playedGroupFixtures + playedKOFixtures) / totalPossible) * 100) : 0
+
+  const topBoard = miniBoard(players, fixtures)
+  const upcoming = fixtures.filter(f => !f.played && !f.isBye).slice(0, 4)
 
   return (
-    <div className="fade-up">
-      <div className="card" style={{
-        padding: 24,
-        marginBottom: 22,
-        borderRadius: 22,
-        overflow: 'hidden',
-        position: 'relative',
-        background: 'linear-gradient(135deg, rgba(9,32,9,0.98) 0%, rgba(4,14,4,0.98) 58%, rgba(36,30,8,0.95) 100%)',
-        border: '1px solid rgba(245,197,24,0.18)',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.28)',
-      }}>
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at top right, rgba(245,197,24,0.14), transparent 30%), radial-gradient(circle at left center, rgba(89,164,89,0.14), transparent 24%)',
-          pointerEvents: 'none',
-        }} />
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>
-            <div>
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '6px 10px',
-                borderRadius: 999,
-                marginBottom: 10,
-                background: 'rgba(245,197,24,0.08)',
-                border: '1px solid rgba(245,197,24,0.18)',
-                fontSize: 11,
-                letterSpacing: 1.4,
-                color: 'var(--gold)',
-              }}>
-                🏅 OVERALL RACE
-              </div>
-              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: 42, lineHeight: 0.95, letterSpacing: 2, color: 'var(--gold)', marginBottom: 8 }}>
-                LEADERBOARD
-              </h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 760 }}>
-                {board.length === 0
-                  ? 'No match results yet. Once scores start coming in, this screen turns into the live race table for the whole tournament.'
-                  : `Ranked by total points across the tournament, with goals scored as the tiebreaker. Group and knockout contributions are shown separately.`}
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <CopyButton text={exportLeaderboard(players, fixtures)} label="📋 Copy Leaderboard" size="small" />
-            </div>
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr',
-            gap: 18,
-          }}>
-            <div style={{
-              padding: 18,
-              borderRadius: 18,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1.5, marginBottom: 4 }}>CURRENT RACE LEADER</div>
-                  <div style={{ fontFamily: 'Bebas Neue', fontSize: 30, letterSpacing: 1.4, color: 'var(--text-primary)' }}>
-                    {top ? top.name : 'No Leader Yet'}
-                  </div>
-                </div>
-                <div style={{
-                  padding: '8px 12px',
-                  borderRadius: 999,
-                  background: 'rgba(245,197,24,0.08)',
-                  border: '1px solid rgba(245,197,24,0.18)',
-                  fontSize: 12,
-                  color: 'var(--gold)',
-                }}>
-                  {top ? `${top.Pts} pts · ${top.GF} goals` : 'Waiting for first result'}
-                </div>
-              </div>
-
-              <div style={{
-                height: 8,
-                borderRadius: 999,
-                overflow: 'hidden',
-                background: 'rgba(255,255,255,0.06)',
-                marginBottom: 12,
-              }}>
-                <div style={{
-                  width: board.length ? '100%' : '0%',
-                  height: '100%',
-                  background: 'linear-gradient(90deg, rgba(245,197,24,0.5), rgba(245,197,24,1))',
-                }} />
-              </div>
-
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {board.slice(0, 3).map((p, idx) => (
-                  <div key={p.id} style={{
-                    padding: '8px 10px',
-                    borderRadius: 12,
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    minWidth: 130,
-                  }}>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{MEDAL[idx]} Rank {idx + 1}</div>
-                    <div style={{ fontWeight: 700 }}>{p.name}</div>
-                    {p.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{p.gameId}</div>}
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{p.Pts} pts · {p.GF} GF</div>
-                  </div>
-                ))}
-                {board.length === 0 && (
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                    Top positions will appear here once matches are recorded.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div style={{
-              padding: 18,
-              borderRadius: 18,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))',
-            }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1.5, marginBottom: 10 }}>RANKING RULE</div>
-              <div style={{ display: 'grid', gap: 10 }}>
-                {[
-                  '1. Highest points',
-                  '2. Goals scored tiebreaker',
-                  '3. Alphabetical if still tied',
-                ].map(rule => (
-                  <div key={rule} style={{
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    fontSize: 13,
-                    color: 'var(--text-primary)',
-                  }}>
-                    {rule}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-        gap: 14,
-        marginBottom: 24,
+        ...panelStyle(),
+        padding: 24,
+        background: `
+          radial-gradient(circle at top right, ${withAlpha(phase.color, 0.18)} 0%, transparent 30%),
+          radial-gradient(circle at bottom left, rgba(212,175,55,0.06) 0%, transparent 25%),
+          linear-gradient(135deg, rgba(13,24,19,0.98), rgba(7,17,12,0.98))
+        `,
       }}>
-        <HeroStat label="PLAYED FIXTURES" value={played.length} sub="All completed matches" accent="var(--gold)" />
-        <HeroStat label="GROUP MATCHES" value={groupPlayed.length} sub="Results from group stage" accent="#8fd38d" />
-        <HeroStat label="KNOCKOUT MATCHES" value={knockoutPlayed.length} sub="Results from knockout stage" accent="#7dc4ff" />
-        <HeroStat label="AVG GOALS" value={avgGoals} sub="Goals per played fixture" accent="#c5d7c5" />
-      </div>
-
-      {board.length === 0 ? (
-        <div className="card" style={{ padding: 46, textAlign: 'center', borderRadius: 20 }}>
-          <div style={{ fontSize: 42, marginBottom: 12 }}>🏅</div>
-          <div style={{ fontFamily: 'Bebas Neue', fontSize: 28, letterSpacing: 1.6, color: 'var(--gold)', marginBottom: 8 }}>
-            LEADERBOARD WILL APPEAR HERE
-          </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 520, margin: '0 auto' }}>
-            Enter results in the fixtures or knockout screen and this page will turn into your live tournament race table.
-          </p>
-        </div>
-      ) : (
-        <>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: 16,
-            marginBottom: 26,
-          }}>
-            {board.slice(0, 3).map((player, index) => (
-              <PodiumCard key={player.id} player={player} index={index} />
-            ))}
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '1.15fr 1.55fr',
-            gap: 18,
-            marginBottom: 24,
-            alignItems: 'start',
-          }}>
-            <div className="card" style={{ padding: 18, borderRadius: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-                <div>
-                  <div style={{ fontFamily: 'Bebas Neue', fontSize: 22, letterSpacing: 1.4, color: 'var(--gold)' }}>
-                    THE RACE
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Live points bars for every player in the tournament.
-                  </div>
-                </div>
-                <div style={{
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  border: '1px solid var(--green-border)',
-                  background: 'rgba(255,255,255,0.03)',
-                  fontSize: 11,
-                  color: 'var(--text-muted)',
-                }}>
-                  {board.length} ranked
-                </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(280px, 0.7fr)', gap: 20 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+              <div style={{
+                padding: '7px 14px', borderRadius: 999,
+                border: `1px solid ${withAlpha(phase.color, 0.40)}`,
+                background: withAlpha(phase.color, 0.12),
+                fontFamily: 'Barlow Condensed', fontWeight: 700, letterSpacing: 1.8, fontSize: 14, color: phase.color,
+              }}>
+                {phase.label}
               </div>
-
-              <div style={{ display: 'grid', gap: 12 }}>
-                {board.map((player, index) => (
-                  <RaceCard
-                    key={player.id}
-                    player={player}
-                    index={index}
-                    maxPts={maxPts}
-                    maxGoals={maxGoals}
-                  />
-                ))}
-              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{phase.blurb}</div>
             </div>
 
-            <div className="card" style={{ overflow: 'hidden', borderRadius: 18 }}>
+            <h1 style={{
+              fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 46, lineHeight: 0.95, letterSpacing: 1.8,
+              marginBottom: 8,
+              background: 'linear-gradient(135deg, var(--gold-dim), var(--gold), var(--text-secondary))',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            }}>
+              EA26 TOURNAMENT DASHBOARD
+            </h1>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 700, lineHeight: 1.6 }}>
+              TNC Community · FIFA PS5 Competition. Track registrations, group progress, standings, fixtures,
+              and the road to the championship from one control center.
+            </p>
+
+            <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(220px, 0.9fr)', gap: 16 }}>
               <div style={{
-                padding: '16px 18px',
-                borderBottom: '1px solid var(--green-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-                flexWrap: 'wrap',
-                background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0))',
+                borderRadius: 16, padding: '16px 18px', background: 'rgba(255,255,255,0.025)', border: '1px solid var(--border-soft)',
               }}>
-                <div>
-                  <div style={{ fontFamily: 'Bebas Neue', fontSize: 22, letterSpacing: 1.4, color: 'var(--gold)' }}>
-                    FULL TABLE
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Total performance across group and knockout fixtures.
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                  <span style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 16, letterSpacing: 1.5, color: 'var(--gold)' }}>TOURNAMENT PROGRESS</span>
+                  <span style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 20, color: 'var(--text-primary)' }}>{completion}%</span>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ height: 10, borderRadius: 999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden', marginBottom: 12 }}>
+                  <div style={{
+                    width: `${completion}%`, height: '100%', borderRadius: 999,
+                    background: 'linear-gradient(90deg, var(--card-green), var(--gold))',
+                  }} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
                   {[
-                    ['GRP', 'Group points/goals'],
-                    ['KO', 'Knockout points/goals'],
-                  ].map(([short, text]) => (
-                    <div key={short} style={{
-                      padding: '6px 10px',
-                      borderRadius: 999,
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      background: 'rgba(255,255,255,0.03)',
-                      fontSize: 11,
-                      color: 'var(--text-muted)',
-                    }}>
-                      <strong style={{ color: 'var(--text-primary)' }}>{short}</strong> {text}
+                    ['Players', players.length],
+                    ['Groups', groups.length],
+                    ['Played', playedFixtures],
+                    ['Qualify', qualifiedCount],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 22, color: 'var(--text-primary)' }}>{value}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>{label}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--green-border)' }}>
-                      {[
-                        ['#', 'left'],
-                        ['Player', 'left'],
-                        ['MP', 'center'],
-                        ['W', 'center'],
-                        ['D', 'center'],
-                        ['L', 'center'],
-                        ['GF', 'center'],
-                        ['GRP PTS', 'center'],
-                        ['GRP GF', 'center'],
-                        ['KO PTS', 'center'],
-                        ['KO GF', 'center'],
-                        ['TOTAL', 'center'],
-                      ].map(([label, align]) => (
-                        <th key={label} style={{
-                          padding: '12px',
-                          textAlign: align,
-                          fontSize: 11,
-                          letterSpacing: 1.4,
-                          color: 'var(--text-muted)',
-                          fontWeight: 700,
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {board.map((player, index) => {
-                      const isLeader = index === 0
-                      return (
-                        <tr key={player.id} style={{
-                          borderBottom: '1px solid rgba(255,255,255,0.05)',
-                          background: isLeader ? 'rgba(245,197,24,0.04)' : index % 2 ? 'rgba(255,255,255,0.015)' : 'transparent',
-                        }}>
-                          <TableCell>
-                            {index < 3
-                              ? <span style={{ fontSize: 18 }}>{MEDAL[index]}</span>
-                              : <span style={{ fontFamily: 'Bebas Neue', fontSize: 18, color: 'var(--text-muted)' }}>{index + 1}</span>}
-                          </TableCell>
-
-                          <TableCell strong>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <div style={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: '50%',
-                                background: isLeader ? 'var(--gold)' : index < 3 ? '#8fd38d' : 'rgba(255,255,255,0.18)',
-                                boxShadow: isLeader ? '0 0 10px rgba(245,197,24,0.45)' : 'none',
-                              }} />
-                              <div>
-                                <div style={{ fontWeight: 700 }}>{player.name}</div>
-                                {player.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{player.gameId}</div>}
-                              </div>
-                            </div>
-                          </TableCell>
-
-                          <TableCell align="center" muted>{player.MP}</TableCell>
-                          <TableCell align="center" color={player.W ? '#78d078' : 'var(--text-muted)'} strong={player.W > 0}>{player.W}</TableCell>
-                          <TableCell align="center" color={player.D ? 'var(--gold)' : 'var(--text-muted)'}>{player.D}</TableCell>
-                          <TableCell align="center" color={player.L ? 'var(--danger)' : 'var(--text-muted)'}>{player.L}</TableCell>
-                          <TableCell align="center" strong>{player.GF}</TableCell>
-                          <TableCell align="center" color="#8fd38d">{player.groupPts}</TableCell>
-                          <TableCell align="center" color="#8fd38d">{player.groupGoals}</TableCell>
-                          <TableCell align="center" color="#7dc4ff">{player.knockPts}</TableCell>
-                          <TableCell align="center" color="#7dc4ff">{player.knockGoals}</TableCell>
-                          <TableCell align="center" strong color={isLeader ? 'var(--gold)' : 'var(--text-primary)'}>
-                            <span style={{ fontFamily: 'Bebas Neue', fontSize: 24, letterSpacing: 1 }}>{player.Pts}</span>
-                          </TableCell>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
               <div style={{
-                padding: '12px 18px',
-                borderTop: '1px solid var(--green-border)',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 10,
-                fontSize: 12,
-                color: 'var(--text-muted)',
+                borderRadius: 16, padding: '16px 18px', background: 'rgba(255,255,255,0.025)', border: '1px solid var(--border-soft)',
               }}>
-                <span>Wins = 3 points</span>
-                <span>Draws = 1 point</span>
-                <span>Losses = 0 points</span>
-                <span style={{ marginLeft: 'auto' }}>Manual ET/Pens winner counts as a win</span>
+                <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 16, letterSpacing: 1.5, color: 'var(--gold)', marginBottom: 10 }}>NEXT STEP</div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{nextStep}</p>
               </div>
             </div>
           </div>
-        </>
-      )}
+
+          <div style={{
+            borderRadius: 20, overflow: 'hidden',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))',
+            border: '1px solid var(--border-soft)',
+            boxShadow: 'var(--shadow-card)',
+          }}>
+            <SectionHeader title="TOURNAMENT SNAPSHOT" meta={`${playedFixtures}/${totalPossible || 0} played`} />
+            <div style={{ padding: 18, display: 'grid', gap: 14 }}>
+              {[
+                ['Registration', `${players.length} players added`, players.length > 0],
+                ['Groups', `${groups.length} groups configured`, groups.length > 0],
+                ['Group Stage', `${playedGroupFixtures}/${totalGroupFixtures} matches complete`, totalGroupFixtures > 0],
+                ['Knockout', `${playedKOFixtures}/${totalKOFixtures} matches complete`, totalKOFixtures > 0],
+              ].map(([title, meta, ok]) => (
+                <div key={title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: '50%', display: 'grid', placeItems: 'center',
+                    background: ok ? 'rgba(93,143,106,0.14)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${ok ? 'rgba(93,143,106,0.22)' : 'var(--border-soft)'}`,
+                    color: ok ? 'var(--card-green)' : 'var(--text-muted)',
+                    fontSize: 13,
+                    flexShrink: 0,
+                  }}>
+                    {ok ? '✓' : '•'}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{meta}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, minmax(0, 1fr))', gap: 14 }}>
+        <StatCard icon="👥" label="PLAYERS" value={players.length} sub={`${groups.length} groups created`} accent="var(--card-green)" />
+        <StatCard icon="📋" label="GROUPS" value={groups.length} sub={`${qualifiedCount} slots to knockout`} accent="var(--card-blue)" />
+        <StatCard icon="⚽" label="MATCHES" value={fixtures.length} sub={`${playedFixtures} played so far`} accent="var(--card-orange)" />
+        <StatCard icon="🏆" label="CURRENT PHASE" value={phase.label} sub={phase.blurb} accent="var(--gold)" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.35fr 1fr', gap: 18 }}>
+        <div style={{ ...panelStyle(), overflow: 'hidden' }}>
+          <SectionHeader title="UPCOMING MATCHES" meta={`${playedFixtures}/${fixtures.length} played`} />
+          <div style={{ padding: 8 }}>
+            {upcoming.length === 0 ? (
+              <div style={{ padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>No upcoming fixtures right now.</div>
+            ) : upcoming.map(f => (
+              <div key={f.id} style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto 1fr',
+                gap: 12,
+                alignItems: 'center',
+                padding: '14px 16px',
+                borderBottom: '1px solid rgba(255,255,255,0.04)',
+              }}>
+                <div style={{ justifySelf: 'end', textAlign: 'right' }}>
+                  <div style={{ fontWeight: 700 }}>{pName(players, f.homeId)}</div>
+                  {pGameId(players, f.homeId) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{pGameId(players, f.homeId)}</div>}
+                </div>
+                <div style={{
+                  minWidth: 66,
+                  padding: '6px 12px',
+                  textAlign: 'center',
+                  borderRadius: 10,
+                  border: '1px solid var(--border-soft)',
+                  background: 'rgba(255,255,255,0.02)',
+                  fontFamily: 'Barlow Condensed',
+                  fontWeight: 700,
+                  letterSpacing: 1.2,
+                  color: 'var(--text-muted)',
+                }}>
+                  VS
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{pName(players, f.awayId)}</div>
+                  {pGameId(players, f.awayId) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{pGameId(players, f.awayId)}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ ...panelStyle(), overflow: 'hidden' }}>
+          <SectionHeader title="LEADERBOARD" meta="Points · Wins · Form" />
+          <div style={{ padding: 16, display: 'grid', gap: 16 }}>
+            {topBoard.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Leaderboard will fill once results are entered.</div>
+            ) : topBoard.map((p, idx) => {
+              const medals = ['🥇', '🥈', '🥉']
+              const maxPts = topBoard[0]?.Pts || 1
+              return (
+                <div key={p.id}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 18 }}>{medals[idx] ?? '•'}</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                        {p.gameId && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{p.gameId}</div>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                      <span style={{ fontFamily: 'Barlow Condensed', fontWeight: 700, fontSize: 22, color: idx === 0 ? 'var(--gold)' : 'var(--text-primary)' }}>
+                        {p.Pts}
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>pts</span>
+                    </div>
+                  </div>
+                  <div style={{ height: 5, borderRadius: 999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden', marginBottom: 8 }}>
+                    <div style={{
+                      width: `${(p.Pts / maxPts) * 100}%`,
+                      height: '100%',
+                      background: idx === 0 ? 'linear-gradient(90deg, var(--gold-dim), var(--gold))' : `linear-gradient(90deg, var(--card-green), ${withAlpha('var(--card-green)', 0.6)})`,
+                    }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'right' }}>
+                    {p.W}W · {p.D}D · {p.L}L
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
