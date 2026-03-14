@@ -12,9 +12,9 @@ import Settings from './components/Settings'
 import AdminLogin from './components/AdminLogin'
 import { load, save, KEYS } from './utils/storage'
 
-const DEFAULT_SETTINGS       = { adminPassword: 'ea26admin', openResultEntry: false, minPlayers: 1 }
+const DEFAULT_SETTINGS = { adminPassword: 'ea26admin', openResultEntry: false, minPlayers: 1 }
 const DEFAULT_FIXTURE_CONFIG = { group: 1, quarter: 1, semi: 1, final: 1 }
-const DEFAULT_KNOCKOUT       = { locked: false, seeding: [], totalRounds: 0 }
+const DEFAULT_KNOCKOUT = { locked: false, seeding: [], totalRounds: 0 }
 
 function getPhaseLabel({ players, groupsLocked, fixturesGenerated, knockoutBracket }) {
   if ((knockoutBracket?.seeding?.length ?? 0) > 0 || knockoutBracket?.locked) return 'Knockout'
@@ -30,42 +30,45 @@ function TopBadge({ children, tone = 'gold' }) {
     green: { color: '#83d883', bg: 'rgba(76,175,80,0.10)', border: 'rgba(76,175,80,0.18)' },
     blue: { color: '#8ec9ff', bg: 'rgba(108,168,255,0.10)', border: 'rgba(108,168,255,0.18)' },
   }
+
   const palette = tones[tone] ?? tones.gold
 
   return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 6,
-      padding: '6px 10px',
-      borderRadius: 999,
-      fontSize: 11,
-      letterSpacing: 1.4,
-      color: palette.color,
-      background: palette.bg,
-      border: `1px solid ${palette.border}`,
-      whiteSpace: 'nowrap',
-    }}>
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '6px 10px',
+        borderRadius: 999,
+        fontSize: 11,
+        letterSpacing: 1.4,
+        color: palette.color,
+        background: palette.bg,
+        border: `1px solid ${palette.border}`,
+        whiteSpace: 'nowrap',
+      }}
+    >
       {children}
     </span>
   )
 }
 
 export default function App() {
-  const [players,         setPlayers]        = useState(() => load(KEYS.PLAYERS, []))
-  const [groups,          setGroups]         = useState(() => load(KEYS.GROUPS, []))
-  const [groupsLocked,    setGroupsLocked]   = useState(() => load(KEYS.GROUPS_LOCKED, false))
-  const [fixtures,        setFixtures]       = useState(() => load(KEYS.FIXTURES, []))
-  const [fixtureConfig,   setFixtureConfig]  = useState(() => load(KEYS.FIXTURE_CONFIG, DEFAULT_FIXTURE_CONFIG))
-  const [fixturesLocked,  setFixturesLocked] = useState(() => load(KEYS.FIXTURES_LOCKED, false))
-  const [qualifierConfig, setQualifierConfig]= useState(() => load(KEYS.QUALIFIER_CONFIG, { perGroup: {}, bestLosers: 0 }))
-  const [knockoutBracket, setKnockoutBracket]= useState(() => load(KEYS.KNOCKOUT_BRACKET, DEFAULT_KNOCKOUT))
-  const [settings,        setSettings]       = useState(() => load(KEYS.SETTINGS, DEFAULT_SETTINGS))
-  const [isAdmin,         setIsAdmin]        = useState(false)
-  const [showLogin,       setShowLogin]      = useState(false)
-  const [activeTab,       setActiveTab]      = useState('dashboard')
-  const [mobileOpen,      setMobileOpen]     = useState(false)
-  const [isMobile,        setIsMobile]       = useState(() => window.innerWidth < 768)
+  const [players, setPlayers] = useState(() => load(KEYS.PLAYERS, []))
+  const [groups, setGroups] = useState(() => load(KEYS.GROUPS, []))
+  const [groupsLocked, setGroupsLocked] = useState(() => load(KEYS.GROUPS_LOCKED, false))
+  const [fixtures, setFixtures] = useState(() => load(KEYS.FIXTURES, []))
+  const [fixtureConfig, setFixtureConfig] = useState(() => load(KEYS.FIXTURE_CONFIG, DEFAULT_FIXTURE_CONFIG))
+  const [fixturesLocked, setFixturesLocked] = useState(() => load(KEYS.FIXTURES_LOCKED, false))
+  const [qualifierConfig, setQualifierConfig] = useState(() => load(KEYS.QUALIFIER_CONFIG, { perGroup: {}, bestLosers: 0 }))
+  const [knockoutBracket, setKnockoutBracket] = useState(() => load(KEYS.KNOCKOUT_BRACKET, DEFAULT_KNOCKOUT))
+  const [settings, setSettings] = useState(() => load(KEYS.SETTINGS, DEFAULT_SETTINGS))
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768)
@@ -73,15 +76,15 @@ export default function App() {
     return () => window.removeEventListener('resize', fn)
   }, [])
 
-  useEffect(() => { save(KEYS.PLAYERS,          players)         }, [players])
-  useEffect(() => { save(KEYS.GROUPS,           groups)          }, [groups])
-  useEffect(() => { save(KEYS.GROUPS_LOCKED,    groupsLocked)    }, [groupsLocked])
-  useEffect(() => { save(KEYS.FIXTURES,         fixtures)        }, [fixtures])
-  useEffect(() => { save(KEYS.FIXTURE_CONFIG,   fixtureConfig)   }, [fixtureConfig])
-  useEffect(() => { save(KEYS.FIXTURES_LOCKED,  fixturesLocked)  }, [fixturesLocked])
+  useEffect(() => { save(KEYS.PLAYERS, players) }, [players])
+  useEffect(() => { save(KEYS.GROUPS, groups) }, [groups])
+  useEffect(() => { save(KEYS.GROUPS_LOCKED, groupsLocked) }, [groupsLocked])
+  useEffect(() => { save(KEYS.FIXTURES, fixtures) }, [fixtures])
+  useEffect(() => { save(KEYS.FIXTURE_CONFIG, fixtureConfig) }, [fixtureConfig])
+  useEffect(() => { save(KEYS.FIXTURES_LOCKED, fixturesLocked) }, [fixturesLocked])
   useEffect(() => { save(KEYS.QUALIFIER_CONFIG, qualifierConfig) }, [qualifierConfig])
   useEffect(() => { save(KEYS.KNOCKOUT_BRACKET, knockoutBracket) }, [knockoutBracket])
-  useEffect(() => { save(KEYS.SETTINGS,         settings)        }, [settings])
+  useEffect(() => { save(KEYS.SETTINGS, settings) }, [settings])
 
   const fixturesGenerated = fixtures.length > 0
   const playedFixtures = fixtures.filter(f => f.played && !f.isBye).length
@@ -89,21 +92,24 @@ export default function App() {
   const phaseLabel = getPhaseLabel({ players, groupsLocked, fixturesGenerated, knockoutBracket })
 
   const TABS = [
-    { id: 'dashboard', label: 'Dashboard',   icon: '⚡' },
-    { id: 'players',   label: 'Players',     icon: '⚽' },
-    { id: 'groups',    label: 'Groups',      icon: '📋' },
-    { id: 'fixtures',  label: 'Fixtures',    icon: '📅', locked: !groupsLocked },
-    { id: 'standings', label: 'Standings',   icon: '📊', locked: !fixturesGenerated },
-    { id: 'knockout',  label: 'Knockout',    icon: '🏆', locked: !fixturesGenerated },
-    { id: 'scorers',   label: 'Leaderboard', icon: '🏅', locked: !fixturesGenerated },
-    { id: 'export',    label: 'Export',      icon: '📤', locked: !fixturesGenerated },
-    { id: 'settings',  label: 'Settings',    icon: '⚙️', adminOnly: true },
+    { id: 'dashboard', label: 'Dashboard', icon: '⚡' },
+    { id: 'players', label: 'Players', icon: '⚽' },
+    { id: 'groups', label: 'Groups', icon: '📋' },
+    { id: 'fixtures', label: 'Fixtures', icon: '📅', locked: !groupsLocked },
+    { id: 'standings', label: 'Standings', icon: '📊', locked: !fixturesGenerated },
+    { id: 'knockout', label: 'Knockout', icon: '🏆', locked: !fixturesGenerated },
+    { id: 'scorers', label: 'Leaderboard', icon: '🏅', locked: !fixturesGenerated },
+    { id: 'export', label: 'Export', icon: '📤', locked: !fixturesGenerated },
+    { id: 'settings', label: 'Settings', icon: '⚙️', adminOnly: true },
   ]
 
   const activeMeta = TABS.find(t => t.id === activeTab) ?? TABS[0]
 
   function handleTabClick(tab) {
-    if (tab.adminOnly && !isAdmin) { setShowLogin(true); return }
+    if (tab.adminOnly && !isAdmin) {
+      setShowLogin(true)
+      return
+    }
     if (tab.locked) return
     setActiveTab(tab.id)
   }
@@ -132,26 +138,17 @@ export default function App() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--green-deep)' }}>
       {!isMobile && (
-        <div style={{
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 276,
-          zIndex: 70,
-        }}>
-          <Sidebar
-            tabs={TABS}
-            activeTab={activeTab}
-            onTabClick={handleTabClick}
-            isAdmin={isAdmin}
-            onAdminClick={() => setShowLogin(true)}
-            onLogout={handleLogout}
-            mobileOpen={false}
-            onMobileClose={() => {}}
-            stats={sidebarStats}
-          />
-        </div>
+        <Sidebar
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabClick={handleTabClick}
+          isAdmin={isAdmin}
+          onAdminClick={() => setShowLogin(true)}
+          onLogout={handleLogout}
+          mobileOpen={false}
+          onMobileClose={() => {}}
+          stats={sidebarStats}
+        />
       )}
 
       {isMobile && (
@@ -168,31 +165,37 @@ export default function App() {
         />
       )}
 
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        minWidth: 0,
-        marginLeft: isMobile ? 0 : 276,
-      }}>
-        <header style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 60,
-          backdropFilter: 'blur(12px)',
-          background: 'linear-gradient(180deg, rgba(4,12,4,0.88), rgba(4,12,4,0.72))',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
-        }}>
-          <div style={{
-            maxWidth: 1240,
-            margin: '0 auto',
-            padding: isMobile ? '12px 16px' : '14px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 14,
-            flexWrap: 'wrap',
-          }}>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          marginLeft: isMobile ? 0 : 276,
+        }}
+      >
+        <header
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 60,
+            backdropFilter: 'blur(12px)',
+            background: 'linear-gradient(180deg, rgba(4,12,4,0.88), rgba(4,12,4,0.72))',
+            borderBottom: '1px solid rgba(255,255,255,0.05)',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 1240,
+              margin: '0 auto',
+              padding: isMobile ? '12px 16px' : '14px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 14,
+              flexWrap: 'wrap',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
               {isMobile && (
                 <button
@@ -215,13 +218,15 @@ export default function App() {
 
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-                  <div style={{
-                    fontFamily: 'Bebas Neue',
-                    fontSize: isMobile ? 24 : 30,
-                    lineHeight: 0.95,
-                    letterSpacing: 2,
-                    color: 'var(--gold)',
-                  }}>
+                  <div
+                    style={{
+                      fontFamily: 'Bebas Neue',
+                      fontSize: isMobile ? 24 : 30,
+                      lineHeight: 0.95,
+                      letterSpacing: 2,
+                      color: 'var(--gold)',
+                    }}
+                  >
                     {activeMeta.label}
                   </div>
 
@@ -230,7 +235,15 @@ export default function App() {
                   {settings.openResultEntry && <TopBadge tone="blue">🔓 Open Result Entry</TopBadge>}
                 </div>
 
-                <div style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    gap: 12,
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <span>{players.length} players</span>
                   <span>{groups.length} groups</span>
                   <span>{playedFixtures} played matches</span>
@@ -376,24 +389,30 @@ export default function App() {
           </div>
         </main>
 
-        <footer style={{
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          background: 'linear-gradient(180deg, rgba(5,14,5,0.9), rgba(3,9,3,0.95))',
-        }}>
-          <div style={{
-            maxWidth: 1240,
-            margin: '0 auto',
-            padding: '14px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            flexWrap: 'wrap',
-            color: '#5f785f',
-            fontSize: 11,
-            letterSpacing: 1.6,
-          }}>
-            <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, letterSpacing: 2.2 }}>EA26 TOURNAMENT MANAGER</span>
+        <footer
+          style={{
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            background: 'linear-gradient(180deg, rgba(5,14,5,0.9), rgba(3,9,3,0.95))',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 1240,
+              margin: '0 auto',
+              padding: '14px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap',
+              color: '#5f785f',
+              fontSize: 11,
+              letterSpacing: 1.6,
+            }}
+          >
+            <span style={{ fontFamily: 'Bebas Neue', fontSize: 14, letterSpacing: 2.2 }}>
+              EA26 TOURNAMENT MANAGER
+            </span>
             <span>TNC · FIFA PS5 · Local-first tournament app</span>
           </div>
         </footer>
