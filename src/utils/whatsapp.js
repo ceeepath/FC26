@@ -116,31 +116,52 @@ export function exportResultsByRound(groups, players, fixtures, fixtureConfig) {
   const groupFix = fixtures.filter(f => f.type === 'group')
   if (!groupFix.length) return 'No fixtures generated yet.'
 
+  const legs = fixtureConfig?.group === 2 ? 2 : 1
   const lines = []
   lines.push('⚽ *MATCH RESULTS — GROUP STAGE*')
   lines.push(divider('═', 32))
 
-  // By round
-  const byGroup = groups.map(group => ({
-    group,
-    all: groupFix.filter(f => f.groupId === group.id),
-  }))
-  const maxPerGroup = Math.max(...byGroup.map(g => g.all.length))
+  // Build matchday buckets per group (circle method: perDay = floor(groupSize/2))
+  const groupBuckets = groups.map(group => {
+    const all = groupFix.filter(f => f.groupId === group.id)
+    const n = group.playerIds?.length ?? 4
+    const perDay = Math.max(1, Math.floor(n / 2))
+    const pairIdxs = [...new Set(all.map(f => f.pairIdx))].sort((a, b) => a - b)
+    const buckets = []
+    for (let i = 0; i < pairIdxs.length; i += perDay) {
+      buckets.push(pairIdxs.slice(i, i + perDay))
+    }
+    return { group, all, buckets }
+  })
 
-  for (let rIdx = 0; rIdx < maxPerGroup; rIdx++) {
-    lines.push('')
-    lines.push(`🔄 *ROUND ${rIdx+1}*`)
-    lines.push(divider())
-    byGroup.forEach(({ group, all }) => {
-      const f = all[rIdx]
-      if (!f) return
-      const leg = fixtureConfig?.group === 2 ? ` (L${f.leg})` : ''
-      const score = f.played
-        ? `${f.homeScore} - ${f.awayScore}`
-        : 'vs'
-      const status = f.played ? '' : ' _(pending)_'
-      lines.push(`  ${group.name}${leg}: ${playerName(players,f.homeId)} *${score}* ${playerName(players,f.awayId)}${status}`)
-    })
+  const maxDays = Math.max(...groupBuckets.map(b => b.buckets.length), 0)
+
+  for (let dayIdx = 0; dayIdx < maxDays; dayIdx++) {
+    for (let leg = 1; leg <= legs; leg++) {
+      if (legs === 2) {
+        lines.push('')
+        lines.push(`🔄 *MATCHDAY ${dayIdx + 1} · LEG ${leg}*`)
+      } else {
+        lines.push('')
+        lines.push(`🔄 *MATCHDAY ${dayIdx + 1}*`)
+      }
+      lines.push(divider())
+
+      let hasAny = false
+      groupBuckets.forEach(({ group, all, buckets }) => {
+        const chunk = buckets[dayIdx]
+        if (!chunk) return
+        chunk.forEach(pairIdx => {
+          const f = all.find(fx => fx.pairIdx === pairIdx && fx.leg === leg)
+          if (!f) return
+          hasAny = true
+          const score = f.played ? `${f.homeScore} - ${f.awayScore}` : 'vs'
+          const status = f.played ? '' : ' _(pending)_'
+          lines.push(`  ${group.name}: ${playerName(players, f.homeId)} *${score}* ${playerName(players, f.awayId)}${status}`)
+        })
+      })
+      if (!hasAny) lines.push('  _(no fixtures this matchday)_')
+    }
   }
 
   lines.push('')
