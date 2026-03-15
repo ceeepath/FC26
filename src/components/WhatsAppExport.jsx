@@ -358,21 +358,61 @@ function LeaderboardCard({ players, fixtures }) {
   )
 }
 
-function RoundCard({ rIdx, groups, players, fixtures, fixtureConfig }) {
+// Build matchday rounds using circle method (same logic as FixtureSetup)
+function buildMatchdays(groups, fixtures, fixtureConfig) {
   const groupFix = fixtures.filter(f => f.type === 'group')
-  const byGroup = groups.map(g => ({ group: g, all: groupFix.filter(f => f.groupId === g.id) }))
-  const roundFixtures = byGroup.map(({ group, all }) => ({ group, f: all[rIdx] ?? null })).filter(x => x.f)
-  const playedInRound = roundFixtures.filter(x => x.f.played).length
+  const legs = fixtureConfig?.group === 2 ? 2 : 1
+
+  const groupBuckets = groups.map(group => {
+    const all = groupFix.filter(f => f.groupId === group.id)
+    const n = group.playerIds?.length ?? 4
+    const perDay = Math.max(1, Math.floor(n / 2))
+    const pairIdxs = [...new Set(all.map(f => f.pairIdx))].sort((a, b) => a - b)
+    const buckets = []
+    for (let i = 0; i < pairIdxs.length; i += perDay) {
+      buckets.push(pairIdxs.slice(i, i + perDay))
+    }
+    return { group, all, buckets }
+  })
+
+  const maxDays = Math.max(...groupBuckets.map(b => b.buckets.length), 0)
+  const rounds = []
+
+  for (let dayIdx = 0; dayIdx < maxDays; dayIdx++) {
+    for (let leg = 1; leg <= legs; leg++) {
+      const matches = []
+      groupBuckets.forEach(({ group, all, buckets }) => {
+        const chunk = buckets[dayIdx]
+        if (!chunk) return
+        chunk.forEach(pairIdx => {
+          const f = all.find(fx => fx.pairIdx === pairIdx && fx.leg === leg)
+          if (f) matches.push({ group, f })
+        })
+      })
+      if (matches.length > 0) {
+        const label = legs === 2
+          ? `MATCHDAY ${dayIdx + 1} · LEG ${leg}`
+          : `MATCHDAY ${dayIdx + 1}`
+        rounds.push({ label, dayIdx, leg, matches })
+      }
+    }
+  }
+  return rounds
+}
+
+function RoundCard({ round, players, fixtureConfig }) {
+  const { label, matches } = round
+  const playedInRound = matches.filter(x => x.f.played).length
 
   return (
     <CaptureShell
-      title={`ROUND ${rIdx + 1} RESULTS`}
-      subtitle={`${playedInRound} of ${roundFixtures.length} results entered`}
+      title={`${label} RESULTS`}
+      subtitle={`${playedInRound} of ${matches.length} results entered`}
       badge="⚽ ROUND RESULTS"
     >
       <div style={{ display: 'grid', gap: 12 }}>
-        {roundFixtures.map(({ group, f }) => {
-          const leg = fixtureConfig?.group === 2 ? ` · Leg ${f.leg}` : ''
+        {matches.map(({ group, f }) => {
+          const legLabel = fixtureConfig?.group === 2 ? ` · Leg ${f.leg}` : ''
           return (
             <div key={f.id} style={{
               display: 'grid',
@@ -384,7 +424,7 @@ function RoundCard({ rIdx, groups, players, fixtures, fixtureConfig }) {
               border: '1px solid rgba(255,255,255,0.06)',
               background: 'rgba(255,255,255,0.02)',
             }}>
-              <div style={{ fontSize: 11, color: '#8fa58f' }}>{group.name}{leg}</div>
+              <div style={{ fontSize: 11, color: '#8fa58f' }}>{group.name}{legLabel}</div>
               <div style={{ textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pName(players, f.homeId)}</div>
               <div style={{
                 padding: '7px 10px',
@@ -409,24 +449,22 @@ function RoundCard({ rIdx, groups, players, fixtures, fixtureConfig }) {
 }
 
 function PerRoundResults({ groups, players, fixtures, fixtureConfig }) {
-  const groupFix = fixtures.filter(f => f.type === 'group')
-  const byGroup = groups.map(g => ({ all: groupFix.filter(f => f.groupId === g.id) }))
-  const maxR = Math.max(...byGroup.map(g => g.all.length), 0)
-  const roundRefs = Array.from({ length: maxR }, () => useRef(null))
+  const rounds = buildMatchdays(groups, fixtures, fixtureConfig)
+  const roundRefs = Array.from({ length: rounds.length }, () => useRef(null))
 
-  if (maxR === 0) {
+  if (rounds.length === 0) {
     return <p style={{ color: 'var(--text-muted)', padding: 12 }}>No fixtures yet.</p>
   }
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
-      {Array.from({ length: maxR }, (_, rIdx) => (
+      {rounds.map((round, rIdx) => (
         <div key={rIdx}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-            <ImageButton targetRef={roundRefs[rIdx]} filename={`ea26-round-${rIdx + 1}`} size="small" />
+            <ImageButton targetRef={roundRefs[rIdx]} filename={`ea26-matchday-${rIdx + 1}`} size="small" />
           </div>
           <div ref={roundRefs[rIdx]}>
-            <RoundCard rIdx={rIdx} groups={groups} players={players} fixtures={fixtures} fixtureConfig={fixtureConfig} />
+            <RoundCard round={round} players={players} fixtureConfig={fixtureConfig} />
           </div>
         </div>
       ))}
