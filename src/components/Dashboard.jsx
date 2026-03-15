@@ -231,8 +231,8 @@ export default function Dashboard({ players, groups, fixtures, knockoutBracket, 
     const dayIdx = gb.buckets.findIndex(chunk => chunk.includes(f0.pairIdx))
     if (dayIdx === -1) return 'UPCOMING MATCHES'
     return legs === 2
-      ? `MATCHDAY ${dayIdx + 1} · LEG ${f0.leg}`
-      : `MATCHDAY ${dayIdx + 1}`
+      ? `UPCOMING MATCHES · MATCHDAY ${dayIdx + 1} · LEG ${f0.leg}`
+      : `UPCOMING MATCHES · MATCHDAY ${dayIdx + 1}`
   })()
 
   return (
