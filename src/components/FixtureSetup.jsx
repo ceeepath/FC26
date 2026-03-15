@@ -339,66 +339,59 @@ export default function FixtureSetup({
     all: groupFixtures.filter(f => f.groupId === group.id),
   })), [effectiveGroups, groupFixtures])
 
-  // Build rounds by matchday across ALL groups combined.
-  // Each matchday = groupSize/2 fixtures per group (every player plays once).
-  // Round 1 = all groups' matchday-1 fixtures together, Round 2 = matchday-2, etc.
+  // Build rounds by pairIdx across ALL groups.
+  // Match 01 of every group = Matchday 1, Match 02 = Matchday 2, etc.
+  // If 2 legs: Matchday 1 Leg 1 = all pairIdx 0 leg 1, Matchday 1 Leg 2 = all pairIdx 0 leg 2
   const rounds = (() => {
     const legs = fixtureConfig.group === 2 ? 2 : 1
 
-    // For each group, compute how many fixtures per matchday (groupSize / 2)
-    // then assign each fixture a matchday index
-    const groupMatchdays = fixturesByGroup.map(({ group, color, leg1 }) => {
-      const groupSize = effectiveGroups.find(g => g.id === group.id)?.playerIds.length ?? 4
-      const perDay = Math.max(1, Math.floor(groupSize / 2))
-      // leg1 fixtures ordered by pairIdx — each chunk of perDay = one matchday
-      const sorted = [...leg1].sort((a, b) => a.pairIdx - b.pairIdx)
-      return sorted.map((f, i) => ({
-        group, color,
-        matchday: Math.floor(i / perDay),
-        leg1Fixture: f,
-      }))
-    }).flat()
-
-    // Total matchdays = max matchday index + 1
-    const maxMatchday = groupMatchdays.reduce((m, x) => Math.max(m, x.matchday), 0)
+    // Get all unique pairIdx values across all groups (sorted)
+    const allPairIdxs = [...new Set(groupFixtures.map(f => f.pairIdx))].sort((a, b) => a - b)
 
     const result = []
-    for (let day = 0; day <= maxMatchday; day++) {
-      // Leg 1 of this matchday
-      const leg1Matches = groupMatchdays
-        .filter(x => x.matchday === day)
-        .map(({ group, color, leg1Fixture }) => ({ group, color, fixture: leg1Fixture }))
+    allPairIdxs.forEach((pairIdx, i) => {
+      const matchLabel = `MATCH ${String(i + 1).padStart(2, '0')}`
+
+      // Leg 1 — collect this pairIdx leg 1 from every group
+      const leg1Matches = fixturesByGroup
+        .map(({ group, color }) => ({
+          group,
+          color,
+          fixture: groupFixtures.find(f =>
+            f.groupId === group.id && f.pairIdx === pairIdx && f.leg === 1
+          ) ?? null,
+        }))
+        .filter(m => m.fixture !== null)
 
       if (leg1Matches.length > 0) {
         result.push({
           roundNum: result.length + 1,
-          label: legs === 2 ? `MATCHDAY ${day + 1} · LEG 1` : `MATCHDAY ${day + 1}`,
+          label: legs === 2 ? `${matchLabel} · LEG 1` : matchLabel,
           matches: leg1Matches,
         })
       }
 
-      // Leg 2 of this matchday (if 2-leg format)
+      // Leg 2 — collect this pairIdx leg 2 from every group
       if (legs === 2) {
-        const leg2Matches = groupMatchdays
-          .filter(x => x.matchday === day)
-          .map(({ group, color, leg1Fixture }) => {
-            // Find corresponding leg 2 fixture (same pairIdx, leg 2)
-            const leg2 = groupFixtures.find(f =>
-              f.groupId === group.id && f.pairIdx === leg1Fixture.pairIdx && f.leg === 2
-            )
-            return leg2 ? { group, color, fixture: leg2 } : null
-          })
-          .filter(Boolean)
+        const leg2Matches = fixturesByGroup
+          .map(({ group, color }) => ({
+            group,
+            color,
+            fixture: groupFixtures.find(f =>
+              f.groupId === group.id && f.pairIdx === pairIdx && f.leg === 2
+            ) ?? null,
+          }))
+          .filter(m => m.fixture !== null)
 
         if (leg2Matches.length > 0) {
           result.push({
             roundNum: result.length + 1,
-            label: `MATCHDAY ${day + 1} · LEG 2`,
+            label: `${matchLabel} · LEG 2`,
             matches: leg2Matches,
           })
         }
       }
-    }
+    })
     return result
   })()
 
