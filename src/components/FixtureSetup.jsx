@@ -19,10 +19,32 @@ const GROUP_COLORS = [
   { border: '#4a6a1a', bg: 'rgba(74,106,26,0.10)', label: '#a0d060', glow: 'rgba(160,208,96,0.16)' },
 ]
 
+// Circle method round-robin: returns pairs ordered so each player
+// appears exactly once per matchday (every n/2 pairs = one matchday).
+// For odd n, a BYE is added temporarily then removed from output.
 function roundRobin(ids) {
+  const n = ids.length
+  const hasOdd = n % 2 === 1
+  const players = hasOdd ? [...ids, 'BYE_PLACEHOLDER'] : [...ids]
+  const total = players.length
+  const rounds = total - 1
+  const half = total / 2
+  const fixed = players[0]
+  const rotating = players.slice(1)
   const pairs = []
-  for (let i = 0; i < ids.length; i++) {
-    for (let j = i + 1; j < ids.length; j++) pairs.push([ids[i], ids[j]])
+
+  for (let r = 0; r < rounds; r++) {
+    const circle = [fixed, ...rotating]
+    for (let i = 0; i < half; i++) {
+      const home = circle[i]
+      const away = circle[total - 1 - i]
+      // Skip pairs involving the BYE placeholder
+      if (home !== 'BYE_PLACEHOLDER' && away !== 'BYE_PLACEHOLDER') {
+        pairs.push([home, away])
+      }
+    }
+    // Rotate: move last element of rotating to front
+    rotating.unshift(rotating.pop())
   }
   return pairs
 }
@@ -268,7 +290,7 @@ export default function FixtureSetup({
 
     if (isLeague) {
       // League: all players in one pool, no groups
-      const pairs = roundRobin(players.map(p => p.id)).sort(() => Math.random() - 0.5)
+      const pairs = roundRobin(players.map(p => p.id).sort(() => Math.random() - 0.5))
       pairs.forEach((pair, pairIdx) => {
         newFixtures.push({
           id: generateId(), type: 'group', groupId: 'league',
@@ -286,7 +308,7 @@ export default function FixtureSetup({
     } else {
       groups.forEach(group => {
         const validIds = group.playerIds.filter(id => players.some(p => p.id === id))
-        const pairs = roundRobin(validIds).sort(() => Math.random() - 0.5)
+        const pairs = roundRobin(validIds.slice().sort(() => Math.random() - 0.5))
         pairs.forEach((pair, pairIdx) => {
           newFixtures.push({
             id: generateId(), type: 'group', groupId: group.id,
@@ -339,47 +361,48 @@ export default function FixtureSetup({
     all: groupFixtures.filter(f => f.groupId === group.id),
   })), [effectiveGroups, groupFixtures])
 
-  // Build matchdays across ALL groups.
-  // Each matchday = groupSize/2 fixtures per group (each player plays once per matchday).
-  // e.g. 6-player group → 3 fixtures per matchday → 5 groups × 3 = 15 fixtures per matchday.
+  // Build matchdays across ALL groups — handles uneven group sizes.
+  // Each group independently chunks its pairIdxs into matchdays of size floor(groupSize/2).
+  // Then matchdays are merged by day index across all groups.
   const rounds = (() => {
     const legs = fixtureConfig.group === 2 ? 2 : 1
-    const result = []
 
-    // For each group compute how many fixtures per matchday
-    const groupDaySize = fixturesByGroup.map(({ group }) => {
+    // For each group, build its own matchday buckets independently
+    const groupMatchdayBuckets = fixturesByGroup.map(({ group, color }) => {
       const n = effectiveGroups.find(g => g.id === group.id)?.playerIds.length ?? 4
-      return { groupId: group.id, perDay: Math.max(1, Math.floor(n / 2)) }
+      const perDay = Math.max(1, Math.floor(n / 2))
+      const pairIdxs = [...new Set(
+        groupFixtures.filter(f => f.groupId === group.id).map(f => f.pairIdx)
+      )].sort((a, b) => a - b)
+
+      const buckets = []
+      for (let i = 0; i < pairIdxs.length; i += perDay) {
+        buckets.push({ group, color, pairIdxChunk: pairIdxs.slice(i, i + perDay) })
+      }
+      return buckets
     })
 
-    // Use the most common perDay value as the global matchday size
-    // (all groups should have same size, but just in case)
-    const perDay = groupDaySize.length > 0 ? groupDaySize[0].perDay : 1
+    // Find the max number of matchdays across all groups
+    const maxDays = Math.max(...groupMatchdayBuckets.map(b => b.length), 0)
 
-    // Get sorted unique pairIdxs across all groups
-    const allPairIdxs = [...new Set(groupFixtures.map(f => f.pairIdx))].sort((a, b) => a - b)
-
-    // Chunk pairIdxs into matchday buckets of size perDay
-    const matchdays = []
-    for (let i = 0; i < allPairIdxs.length; i += perDay) {
-      matchdays.push(allPairIdxs.slice(i, i + perDay))
-    }
-
-    matchdays.forEach((pairIdxChunk, dayIdx) => {
+    const result = []
+    for (let dayIdx = 0; dayIdx < maxDays; dayIdx++) {
       const dayLabel = `MATCHDAY ${dayIdx + 1}`
 
-      // Leg 1 — all fixtures for this matchday from every group
-      const leg1Matches = fixturesByGroup.flatMap(({ group, color }) =>
-        pairIdxChunk
+      // Collect leg 1 from each group's day bucket
+      const leg1Matches = groupMatchdayBuckets.flatMap(buckets => {
+        const bucket = buckets[dayIdx]
+        if (!bucket) return []
+        return bucket.pairIdxChunk
           .map(pairIdx => ({
-            group,
-            color,
+            group: bucket.group,
+            color: bucket.color,
             fixture: groupFixtures.find(f =>
-              f.groupId === group.id && f.pairIdx === pairIdx && f.leg === 1
+              f.groupId === bucket.group.id && f.pairIdx === pairIdx && f.leg === 1
             ) ?? null,
           }))
           .filter(m => m.fixture !== null)
-      )
+      })
 
       if (leg1Matches.length > 0) {
         result.push({
@@ -389,19 +412,21 @@ export default function FixtureSetup({
         })
       }
 
-      // Leg 2 — same matchday, leg 2
+      // Collect leg 2 from each group's day bucket
       if (legs === 2) {
-        const leg2Matches = fixturesByGroup.flatMap(({ group, color }) =>
-          pairIdxChunk
+        const leg2Matches = groupMatchdayBuckets.flatMap(buckets => {
+          const bucket = buckets[dayIdx]
+          if (!bucket) return []
+          return bucket.pairIdxChunk
             .map(pairIdx => ({
-              group,
-              color,
+              group: bucket.group,
+              color: bucket.color,
               fixture: groupFixtures.find(f =>
-                f.groupId === group.id && f.pairIdx === pairIdx && f.leg === 2
+                f.groupId === bucket.group.id && f.pairIdx === pairIdx && f.leg === 2
               ) ?? null,
             }))
             .filter(m => m.fixture !== null)
-        )
+        })
 
         if (leg2Matches.length > 0) {
           result.push({
@@ -411,7 +436,7 @@ export default function FixtureSetup({
           })
         }
       }
-    })
+    }
 
     return result
   })()
