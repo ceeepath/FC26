@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
 import {
   exportGroupStandings, exportResultsByRound, exportQualifiers,
-  exportKnockoutResults, exportLeaderboard, exportFixtures
+  exportKnockoutResults, exportLeaderboard, exportFixtures, exportFixturesByRound
 } from '../utils/whatsapp'
 
 // ── Shared actions ────────────────────────────────────────────────────────
@@ -698,6 +698,59 @@ function ExportSection({ icon, title, description, text, children, filename, mul
   )
 }
 
+
+function FixturesByRoundCard({ groups, players, fixtures, fixtureConfig }) {
+  const rounds = buildMatchdays(groups, fixtures, fixtureConfig)
+  const roundRefs = Array.from({ length: rounds.length }, () => useRef(null))
+
+  if (rounds.length === 0) {
+    return <p style={{ color: 'var(--text-muted)', padding: 12 }}>No fixtures yet.</p>
+  }
+
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      {rounds.map((round, rIdx) => (
+        <div key={rIdx}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <ImageButton targetRef={roundRefs[rIdx]} filename={`ea26-fixtures-matchday-${rIdx + 1}`} size="small" />
+          </div>
+          <div ref={roundRefs[rIdx]}>
+            <CaptureShell
+              title={`${round.label} FIXTURES`}
+              subtitle={`${round.matches.length} matches scheduled`}
+              badge="📅 MATCHDAY FIXTURES"
+            >
+              <div style={{ display: 'grid', gap: 12 }}>
+                {round.matches.map(({ group, f }, i) => (
+                  <div key={f.id} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '72px minmax(0, 1fr) 76px minmax(0, 1fr)',
+                    gap: 10,
+                    alignItems: 'center',
+                    padding: 12,
+                    borderRadius: 14,
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    background: 'rgba(255,255,255,0.02)',
+                  }}>
+                    <div style={{ fontSize: 11, color: '#8fa58f' }}>{group.name}</div>
+                    <div style={{ textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pName(players, f.homeId)}</div>
+                    <div style={{
+                      padding: '7px 10px', textAlign: 'center', borderRadius: 10,
+                      background: '#081808', border: '1px solid rgba(255,255,255,0.06)',
+                      fontFamily: 'Barlow', fontSize: 11, color: '#5f7a5f', letterSpacing: 0.3,
+                    }}>vs</div>
+                    <div style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pName(players, f.awayId)}</div>
+                  </div>
+                ))}
+              </div>
+            </CaptureShell>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Main export page ──────────────────────────────────────────────────────
 
 export default function WhatsAppExport({
@@ -729,6 +782,16 @@ export default function WhatsAppExport({
       text: exportFixtures(groups, players, fixtures, fixtureConfig),
       card: null,
       tone: 'gold',
+    },
+    {
+      icon: '📅',
+      title: 'FIXTURES BY MATCHDAY',
+      filename: 'ea26-fixtures-by-matchday',
+      description: 'All fixtures grouped by matchday — one image per matchday, perfect for announcing upcoming games.',
+      text: exportFixturesByRound(groups, players, fixtures, fixtureConfig),
+      card: <FixturesByRoundCard groups={groups} players={players} fixtures={fixtures} fixtureConfig={fixtureConfig} />,
+      multiImage: true,
+      tone: 'blue',
     },
     {
       icon: '⚽',
