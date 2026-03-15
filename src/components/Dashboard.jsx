@@ -180,7 +180,60 @@ export default function Dashboard({ players, groups, fixtures, knockoutBracket, 
   const completion = totalPossible > 0 ? Math.round(((playedGroupFixtures + playedKOFixtures) / totalPossible) * 100) : 0
 
   const topBoard = miniBoard(players, fixtures)
-  const upcoming = fixtures.filter(f => !f.played && !f.isBye).slice(0, 4)
+
+  // Upcoming: show the first incomplete matchday across all groups
+  const upcoming = (() => {
+    const groupFix = fixtures.filter(f => f.type === 'group' && !f.isBye)
+    if (!groupFix.length) return fixtures.filter(f => f.type === 'knockout' && !f.played && !f.isBye).slice(0, 4)
+
+    const legs = groupFix.some(f => f.leg === 2) ? 2 : 1
+    const groupBuckets = groups.map(group => {
+      const all = groupFix.filter(f => f.groupId === group.id)
+      const n = group.playerIds?.length ?? 4
+      const perDay = Math.max(1, Math.floor(n / 2))
+      const pairIdxs = [...new Set(all.map(f => f.pairIdx))].sort((a, b) => a - b)
+      const buckets = []
+      for (let i = 0; i < pairIdxs.length; i += perDay) buckets.push(pairIdxs.slice(i, i + perDay))
+      return { group, all, buckets }
+    })
+    const maxDays = Math.max(...groupBuckets.map(b => b.buckets.length), 0)
+
+    for (let dayIdx = 0; dayIdx < maxDays; dayIdx++) {
+      for (let leg = 1; leg <= legs; leg++) {
+        const dayFixtures = groupBuckets.flatMap(({ all, buckets }) => {
+          const chunk = buckets[dayIdx]
+          if (!chunk) return []
+          return chunk.map(pairIdx => all.find(f => f.pairIdx === pairIdx && f.leg === leg)).filter(Boolean)
+        })
+        if (dayFixtures.some(f => !f.played)) return dayFixtures
+      }
+    }
+    return []
+  })()
+
+  // Label for which matchday is shown
+  const upcomingLabel = (() => {
+    const groupFix = fixtures.filter(f => f.type === 'group' && !f.isBye)
+    if (!groupFix.length || !upcoming.length) return 'UPCOMING MATCHES'
+    const legs = groupFix.some(f => f.leg === 2) ? 2 : 1
+    const f0 = upcoming[0]
+    const groupBuckets = groups.map(group => {
+      const all = groupFix.filter(fx => fx.groupId === group.id)
+      const n = group.playerIds?.length ?? 4
+      const perDay = Math.max(1, Math.floor(n / 2))
+      const pairIdxs = [...new Set(all.map(fx => fx.pairIdx))].sort((a, b) => a - b)
+      const buckets = []
+      for (let i = 0; i < pairIdxs.length; i += perDay) buckets.push(pairIdxs.slice(i, i + perDay))
+      return { groupId: group.id, buckets }
+    })
+    const gb = groupBuckets.find(b => b.groupId === f0.groupId)
+    if (!gb) return 'UPCOMING MATCHES'
+    const dayIdx = gb.buckets.findIndex(chunk => chunk.includes(f0.pairIdx))
+    if (dayIdx === -1) return 'UPCOMING MATCHES'
+    return legs === 2
+      ? `MATCHDAY ${dayIdx + 1} · LEG ${f0.leg}`
+      : `MATCHDAY ${dayIdx + 1}`
+  })()
 
   return (
     <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -303,7 +356,7 @@ export default function Dashboard({ players, groups, fixtures, knockoutBracket, 
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.35fr 1fr', gap: 18 }}>
         <div style={{ ...panelStyle(), overflow: 'hidden' }}>
-          <SectionHeader title="UPCOMING MATCHES" meta={`${playedFixtures}/${fixtures.length} played`} />
+          <SectionHeader title={upcomingLabel} meta={`${playedFixtures}/${fixtures.length} played`} />
           <div style={{ padding: 8 }}>
             {upcoming.length === 0 ? (
               <div style={{ padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>No upcoming fixtures right now.</div>
