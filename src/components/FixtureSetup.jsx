@@ -339,59 +339,80 @@ export default function FixtureSetup({
     all: groupFixtures.filter(f => f.groupId === group.id),
   })), [effectiveGroups, groupFixtures])
 
-  // Build rounds by pairIdx across ALL groups.
-  // Match 01 of every group = Matchday 1, Match 02 = Matchday 2, etc.
-  // If 2 legs: Matchday 1 Leg 1 = all pairIdx 0 leg 1, Matchday 1 Leg 2 = all pairIdx 0 leg 2
+  // Build matchdays across ALL groups.
+  // Each matchday = groupSize/2 fixtures per group (each player plays once per matchday).
+  // e.g. 6-player group → 3 fixtures per matchday → 5 groups × 3 = 15 fixtures per matchday.
   const rounds = (() => {
     const legs = fixtureConfig.group === 2 ? 2 : 1
+    const result = []
 
-    // Get all unique pairIdx values across all groups (sorted)
+    // For each group compute how many fixtures per matchday
+    const groupDaySize = fixturesByGroup.map(({ group }) => {
+      const n = effectiveGroups.find(g => g.id === group.id)?.playerIds.length ?? 4
+      return { groupId: group.id, perDay: Math.max(1, Math.floor(n / 2)) }
+    })
+
+    // Use the most common perDay value as the global matchday size
+    // (all groups should have same size, but just in case)
+    const perDay = groupDaySize.length > 0 ? groupDaySize[0].perDay : 1
+
+    // Get sorted unique pairIdxs across all groups
     const allPairIdxs = [...new Set(groupFixtures.map(f => f.pairIdx))].sort((a, b) => a - b)
 
-    const result = []
-    allPairIdxs.forEach((pairIdx, i) => {
-      const matchLabel = `MATCH ${String(i + 1).padStart(2, '0')}`
+    // Chunk pairIdxs into matchday buckets of size perDay
+    const matchdays = []
+    for (let i = 0; i < allPairIdxs.length; i += perDay) {
+      matchdays.push(allPairIdxs.slice(i, i + perDay))
+    }
 
-      // Leg 1 — collect this pairIdx leg 1 from every group
-      const leg1Matches = fixturesByGroup
-        .map(({ group, color }) => ({
-          group,
-          color,
-          fixture: groupFixtures.find(f =>
-            f.groupId === group.id && f.pairIdx === pairIdx && f.leg === 1
-          ) ?? null,
-        }))
-        .filter(m => m.fixture !== null)
+    matchdays.forEach((pairIdxChunk, dayIdx) => {
+      const dayLabel = `MATCHDAY ${dayIdx + 1}`
+
+      // Leg 1 — all fixtures for this matchday from every group
+      const leg1Matches = fixturesByGroup.flatMap(({ group, color }) =>
+        pairIdxChunk
+          .map(pairIdx => ({
+            group,
+            color,
+            fixture: groupFixtures.find(f =>
+              f.groupId === group.id && f.pairIdx === pairIdx && f.leg === 1
+            ) ?? null,
+          }))
+          .filter(m => m.fixture !== null)
+      )
 
       if (leg1Matches.length > 0) {
         result.push({
           roundNum: result.length + 1,
-          label: legs === 2 ? `${matchLabel} · LEG 1` : matchLabel,
+          label: legs === 2 ? `${dayLabel} · LEG 1` : dayLabel,
           matches: leg1Matches,
         })
       }
 
-      // Leg 2 — collect this pairIdx leg 2 from every group
+      // Leg 2 — same matchday, leg 2
       if (legs === 2) {
-        const leg2Matches = fixturesByGroup
-          .map(({ group, color }) => ({
-            group,
-            color,
-            fixture: groupFixtures.find(f =>
-              f.groupId === group.id && f.pairIdx === pairIdx && f.leg === 2
-            ) ?? null,
-          }))
-          .filter(m => m.fixture !== null)
+        const leg2Matches = fixturesByGroup.flatMap(({ group, color }) =>
+          pairIdxChunk
+            .map(pairIdx => ({
+              group,
+              color,
+              fixture: groupFixtures.find(f =>
+                f.groupId === group.id && f.pairIdx === pairIdx && f.leg === 2
+              ) ?? null,
+            }))
+            .filter(m => m.fixture !== null)
+        )
 
         if (leg2Matches.length > 0) {
           result.push({
             roundNum: result.length + 1,
-            label: `${matchLabel} · LEG 2`,
+            label: `${dayLabel} · LEG 2`,
             matches: leg2Matches,
           })
         }
       }
     })
+
     return result
   })()
 
