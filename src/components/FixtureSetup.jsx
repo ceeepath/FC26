@@ -339,13 +339,68 @@ export default function FixtureSetup({
     all: groupFixtures.filter(f => f.groupId === group.id),
   })), [effectiveGroups, groupFixtures])
 
-  const maxPerGroup = Math.max(0, ...fixturesByGroup.map(g => g.all.length))
-  const rounds = Array.from({ length: maxPerGroup }, (_, i) => ({
-    roundNum: i + 1,
-    matches: fixturesByGroup
-      .map(({ group, color, all }) => ({ group, color, fixture: all[i] ?? null }))
-      .filter(m => m.fixture !== null),
-  }))
+  // Build rounds by matchday across ALL groups combined.
+  // Each matchday = groupSize/2 fixtures per group (every player plays once).
+  // Round 1 = all groups' matchday-1 fixtures together, Round 2 = matchday-2, etc.
+  const rounds = (() => {
+    const legs = fixtureConfig.group === 2 ? 2 : 1
+
+    // For each group, compute how many fixtures per matchday (groupSize / 2)
+    // then assign each fixture a matchday index
+    const groupMatchdays = fixturesByGroup.map(({ group, color, leg1 }) => {
+      const groupSize = effectiveGroups.find(g => g.id === group.id)?.playerIds.length ?? 4
+      const perDay = Math.max(1, Math.floor(groupSize / 2))
+      // leg1 fixtures ordered by pairIdx — each chunk of perDay = one matchday
+      const sorted = [...leg1].sort((a, b) => a.pairIdx - b.pairIdx)
+      return sorted.map((f, i) => ({
+        group, color,
+        matchday: Math.floor(i / perDay),
+        leg1Fixture: f,
+      }))
+    }).flat()
+
+    // Total matchdays = max matchday index + 1
+    const maxMatchday = groupMatchdays.reduce((m, x) => Math.max(m, x.matchday), 0)
+
+    const result = []
+    for (let day = 0; day <= maxMatchday; day++) {
+      // Leg 1 of this matchday
+      const leg1Matches = groupMatchdays
+        .filter(x => x.matchday === day)
+        .map(({ group, color, leg1Fixture }) => ({ group, color, fixture: leg1Fixture }))
+
+      if (leg1Matches.length > 0) {
+        result.push({
+          roundNum: result.length + 1,
+          label: legs === 2 ? `MATCHDAY ${day + 1} · LEG 1` : `MATCHDAY ${day + 1}`,
+          matches: leg1Matches,
+        })
+      }
+
+      // Leg 2 of this matchday (if 2-leg format)
+      if (legs === 2) {
+        const leg2Matches = groupMatchdays
+          .filter(x => x.matchday === day)
+          .map(({ group, color, leg1Fixture }) => {
+            // Find corresponding leg 2 fixture (same pairIdx, leg 2)
+            const leg2 = groupFixtures.find(f =>
+              f.groupId === group.id && f.pairIdx === leg1Fixture.pairIdx && f.leg === 2
+            )
+            return leg2 ? { group, color, fixture: leg2 } : null
+          })
+          .filter(Boolean)
+
+        if (leg2Matches.length > 0) {
+          result.push({
+            roundNum: result.length + 1,
+            label: `MATCHDAY ${day + 1} · LEG 2`,
+            matches: leg2Matches,
+          })
+        }
+      }
+    }
+    return result
+  })()
 
   const generatedGroups = fixturesByGroup.filter(g => g.all.length > 0).length
   const progressPct = totalFixtures ? Math.round((playedFixtures / totalFixtures) * 100) : 0
@@ -682,11 +737,11 @@ export default function FixtureSetup({
 
           {view === 'round' && (
             <div style={{ display: 'grid', gap: 18 }}>
-              {rounds.map(({ roundNum, matches }) => (
+              {rounds.map(({ roundNum, label, matches }) => (
                 <section key={roundNum} className="card" style={{ padding: 18 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
                     <div>
-                      <p style={{ fontFamily: 'Bebas Neue', fontSize: 28, letterSpacing: 1.5, color: 'var(--gold)' }}>ROUND {roundNum}</p>
+                      <p style={{ fontFamily: 'Bebas Neue', fontSize: 28, letterSpacing: 1.5, color: 'var(--gold)' }}>{label ?? `ROUND ${roundNum}`}</p>
                       <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Across all active groups</p>
                     </div>
                     <span style={{ padding: '8px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-primary)', fontSize: 12 }}>
