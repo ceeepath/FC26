@@ -314,18 +314,32 @@ function getPairWinner(roundNum, pairIdx, allFixtures, legs) {
   if (!leg1) return null
   if (leg1.isBye) return leg1.homeId
   if (leg1.manualWinnerId) return leg1.manualWinnerId
+
   if (legs === 1) {
     if (!leg1.played) return null
     if (leg1.homeScore > leg1.awayScore) return leg1.homeId
     if (leg1.awayScore > leg1.homeScore) return leg1.awayId
     return null
   }
-  const leg2 = pf.find(f => f.leg === 2)
-  if (!leg1.played || !leg2?.played) return null
-  const gP1 = (leg1.homeScore ?? 0) + (leg2.awayScore ?? 0)
-  const gP2 = (leg1.awayScore ?? 0) + (leg2.homeScore ?? 0)
-  if (gP1 > gP2) return leg1.homeId
-  if (gP2 > gP1) return leg1.awayId
+
+  // Multi-leg: sum goals across all legs
+  // p1 = homeId of leg1 (consistent reference player)
+  const p1 = leg1.homeId
+  const p2 = leg1.awayId
+  let goalsP1 = 0, goalsP2 = 0
+  for (let l = 1; l <= legs; l++) {
+    const leg = pf.find(f => f.leg === l)
+    if (!leg?.played) return null  // all legs must be played
+    if (leg.homeId === p1) {
+      goalsP1 += leg.homeScore ?? 0
+      goalsP2 += leg.awayScore ?? 0
+    } else {
+      goalsP1 += leg.awayScore ?? 0
+      goalsP2 += leg.homeScore ?? 0
+    }
+  }
+  if (goalsP1 > goalsP2) return p1
+  if (goalsP2 > goalsP1) return p2
   return null
 }
 
@@ -477,7 +491,11 @@ export default function KnockoutBracket({
         r1.push({ id: generateId(), type: 'knockout', roundNum: 1, pairIdx: pi, leg: 1, homeId: p1, awayId: 'BYE', homeScore: null, awayScore: null, played: false, manualWinnerId: p1, isBye: true })
       } else {
         r1.push({ id: generateId(), type: 'knockout', roundNum: 1, pairIdx: pi, leg: 1, homeId: p1, awayId: p2, homeScore: null, awayScore: null, played: false, manualWinnerId: null, isBye: false })
-        if (legs === 2) r1.push({ id: generateId(), type: 'knockout', roundNum: 1, pairIdx: pi, leg: 2, homeId: p2, awayId: p1, homeScore: null, awayScore: null, played: false, manualWinnerId: null, isBye: false })
+        for (let l = 2; l <= legs; l++) {
+          const home = l % 2 === 0 ? p2 : p1
+          const away = l % 2 === 0 ? p1 : p2
+          r1.push({ id: generateId(), type: 'knockout', roundNum: 1, pairIdx: pi, leg: l, homeId: home, awayId: away, homeScore: null, awayScore: null, played: false, manualWinnerId: null, isBye: false })
+        }
       }
     }
     setFixtures([...nonKO, ...r1])
@@ -520,7 +538,11 @@ export default function KnockoutBracket({
         newF.push({ id: generateId(), type: 'knockout', roundNum: next, pairIdx: pi, leg: 1, homeId: p1, awayId: 'BYE', homeScore: null, awayScore: null, played: false, manualWinnerId: p1, isBye: true })
       } else {
         newF.push({ id: generateId(), type: 'knockout', roundNum: next, pairIdx: pi, leg: 1, homeId: p1, awayId: p2, homeScore: null, awayScore: null, played: false, manualWinnerId: null, isBye: false })
-        if (nextLegs === 2) newF.push({ id: generateId(), type: 'knockout', roundNum: next, pairIdx: pi, leg: 2, homeId: p2, awayId: p1, homeScore: null, awayScore: null, played: false, manualWinnerId: null, isBye: false })
+        for (let l = 2; l <= nextLegs; l++) {
+          const home = l % 2 === 0 ? p2 : p1
+          const away = l % 2 === 0 ? p1 : p2
+          newF.push({ id: generateId(), type: 'knockout', roundNum: next, pairIdx: pi, leg: l, homeId: home, awayId: away, homeScore: null, awayScore: null, played: false, manualWinnerId: null, isBye: false })
+        }
       }
     }
     setFixtures(prev => [...prev, ...newF])
@@ -618,11 +640,20 @@ export default function KnockoutBracket({
     let aggP2 = 0
     let aggDone = false
     let aggTied = false
-    if (legs === 2 && leg1.played && leg2?.played) {
-      aggP1 = (leg1.homeScore ?? 0) + (leg2.awayScore ?? 0)
-      aggP2 = (leg1.awayScore ?? 0) + (leg2.homeScore ?? 0)
-      aggDone = true
-      aggTied = aggP1 === aggP2 && !leg1.manualWinnerId
+    if (legs > 1) {
+      // Sum all played legs — p1 is always homeId of leg1
+      const p1 = leg1.homeId
+      let allPlayed = true
+      for (let l = 1; l <= legs; l++) {
+        const lf = pf.find(f => f.leg === l)
+        if (!lf?.played) { allPlayed = false; break }
+        if (lf.homeId === p1) { aggP1 += lf.homeScore ?? 0; aggP2 += lf.awayScore ?? 0 }
+        else { aggP1 += lf.awayScore ?? 0; aggP2 += lf.homeScore ?? 0 }
+      }
+      if (allPlayed) {
+        aggDone = true
+        aggTied = aggP1 === aggP2 && !leg1.manualWinnerId
+      }
     }
     const draw1Leg = legs === 1 && leg1.played && leg1.homeScore === leg1.awayScore && !leg1.manualWinnerId
     const needsPick = (draw1Leg || aggTied) && !winner

@@ -2,11 +2,11 @@ import { useMemo, useState, useEffect } from 'react'
 import { generateId } from '../utils/storage'
 
 const STAGES = [
-  { key: 'group', label: 'Group Stage', icon: '📋', hint: 'Round-robin fixtures inside each group' },
+  { key: 'group',   label: 'Group Stage',    icon: '📋', hint: 'Round-robin fixtures inside each group' },
   { key: 'quarter', label: 'Quarter Finals', icon: '⚔️', hint: 'First knockout round' },
-  { key: 'semi', label: 'Semi Finals', icon: '🔥', hint: 'Last four battle it out' },
-  { key: 'final', label: 'Final', icon: '🏆', hint: 'Championship match' },
+  { key: 'semi',    label: 'Semi Finals',    icon: '🔥', hint: 'Last four battle it out' },
 ]
+const FINAL_STAGE = { key: 'final', label: 'Final', icon: '🏆', hint: 'Championship match — set any number of legs' }
 
 const GROUP_COLORS = [
   { border: '#c9960f', bg: 'rgba(201,150,15,0.08)', label: 'var(--gold)', glow: 'rgba(201,150,15,0.16)' },
@@ -588,6 +588,45 @@ export default function FixtureSetup({
               </p>
             </div>
           ))}
+
+          {/* Final — flexible leg count */}
+          <div style={{
+            borderRadius: 18, padding: 16,
+            background: 'linear-gradient(180deg, rgba(255,215,0,0.05), rgba(255,215,0,0.02))',
+            border: '1px solid rgba(255,215,0,0.2)',
+          }}>
+            <div style={{ marginBottom: 12 }}>
+              <p style={{ fontFamily: 'Bebas Neue', fontSize: 20, letterSpacing: 1.2, color: 'var(--gold)' }}>{FINAL_STAGE.icon} {FINAL_STAGE.label}</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{FINAL_STAGE.hint}</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                onClick={() => setLeg('final', Math.max(1, (fixtureConfig.final ?? 1) - 1))}
+                style={{
+                  width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(255,215,0,0.25)',
+                  background: 'rgba(255,215,0,0.08)', color: 'var(--gold)',
+                  fontFamily: 'Bebas Neue', fontSize: 22, cursor: 'pointer',
+                }}
+              >−</button>
+              <div style={{
+                flex: 1, textAlign: 'center',
+                fontFamily: 'Bebas Neue', fontSize: 36, color: 'var(--gold)', letterSpacing: 2,
+              }}>
+                {fixtureConfig.final ?? 1}
+              </div>
+              <button
+                onClick={() => setLeg('final', Math.min(9, (fixtureConfig.final ?? 1) + 1))}
+                style={{
+                  width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(255,215,0,0.25)',
+                  background: 'rgba(255,215,0,0.08)', color: 'var(--gold)',
+                  fontFamily: 'Bebas Neue', fontSize: 22, cursor: 'pointer',
+                }}
+              >+</button>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 10, textAlign: 'center' }}>
+              {(fixtureConfig.final ?? 1) === 1 ? 'Single leg final.' : `${fixtureConfig.final} legs — winner by total goals.`}
+            </p>
+          </div>
         </div>
 
         <div style={{

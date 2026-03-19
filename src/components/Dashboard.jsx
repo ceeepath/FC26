@@ -205,7 +205,8 @@ export default function Dashboard({ players, groups, fixtures, knockoutBracket, 
           if (!chunk) return []
           return chunk.map(pairIdx => all.find(f => f.pairIdx === pairIdx && f.leg === leg)).filter(Boolean)
         })
-        if (dayFixtures.some(f => !f.played)) return dayFixtures
+        const unplayed = dayFixtures.filter(f => !f.played)
+        if (unplayed.length > 0) return unplayed
       }
     }
     return []
