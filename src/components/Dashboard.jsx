@@ -213,28 +213,7 @@ export default function Dashboard({ players, groups, fixtures, knockoutBracket, 
   })()
 
   // Label for which matchday is shown
-  const upcomingLabel = (() => {
-    const groupFix = fixtures.filter(f => f.type === 'group' && !f.isBye)
-    if (!groupFix.length || !upcoming.length) return 'UPCOMING MATCHES'
-    const legs = groupFix.some(f => f.leg === 2) ? 2 : 1
-    const f0 = upcoming[0]
-    const groupBuckets = groups.map(group => {
-      const all = groupFix.filter(fx => fx.groupId === group.id)
-      const n = group.playerIds?.length ?? 4
-      const perDay = Math.max(1, Math.floor(n / 2))
-      const pairIdxs = [...new Set(all.map(fx => fx.pairIdx))].sort((a, b) => a - b)
-      const buckets = []
-      for (let i = 0; i < pairIdxs.length; i += perDay) buckets.push(pairIdxs.slice(i, i + perDay))
-      return { groupId: group.id, buckets }
-    })
-    const gb = groupBuckets.find(b => b.groupId === f0.groupId)
-    if (!gb) return 'UPCOMING MATCHES'
-    const dayIdx = gb.buckets.findIndex(chunk => chunk.includes(f0.pairIdx))
-    if (dayIdx === -1) return 'UPCOMING MATCHES'
-    return legs === 2
-      ? `UPCOMING MATCHES · MATCHDAY ${dayIdx + 1} · LEG ${f0.leg}`
-      : `UPCOMING MATCHES · MATCHDAY ${dayIdx + 1}`
-  })()
+  const upcomingLabel = 'UPCOMING MATCHES'
 
   return (
     <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
