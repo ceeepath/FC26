@@ -122,6 +122,10 @@ export default function App() {
       if (data[KEYS.TOURNAMENT_FORMAT] !== undefined) setTournamentFormat(data[KEYS.TOURNAMENT_FORMAT])
       if (data[KEYS.SETTINGS])         setSettings({ ...DEFAULT_SETTINGS, ...data[KEYS.SETTINGS] })
       setLoading(false)
+      // Enable saves only after React has flushed all state updates above.
+      // setTimeout(0) defers to the next event loop tick, ensuring no
+      // empty-state save can overwrite the data we just loaded.
+      setTimeout(() => { saveEnabled.current = true }, 0)
     }).catch(err => {
       console.error('Failed to load from Supabase:', err)
       setLoadError('Could not connect to the database. Check your connection and try again.')
@@ -130,19 +134,22 @@ export default function App() {
   }, [])
 
   // ── Skip saves until initial load is done ────────────────────────────────
-  const ready = !loading && !loadError
+  // Use a ref instead of derived state to avoid race condition where
+  // setLoading(false) fires before all state setters have settled,
+  // causing empty-state saves to overwrite real data in Supabase.
+  const saveEnabled = useRef(false)
 
   // ── Persist to Supabase whenever state changes ────────────────────────────
-  useEffect(() => { if (ready) save(KEYS.PLAYERS,          players)         }, [players,          ready])
-  useEffect(() => { if (ready) save(KEYS.GROUPS,           groups)          }, [groups,           ready])
-  useEffect(() => { if (ready) save(KEYS.GROUPS_LOCKED,    groupsLocked)    }, [groupsLocked,     ready])
-  useEffect(() => { if (ready) save(KEYS.FIXTURES,         fixtures)        }, [fixtures,         ready])
-  useEffect(() => { if (ready) save(KEYS.FIXTURE_CONFIG,   fixtureConfig)   }, [fixtureConfig,    ready])
-  useEffect(() => { if (ready) save(KEYS.FIXTURES_LOCKED,  fixturesLocked)  }, [fixturesLocked,   ready])
-  useEffect(() => { if (ready) save(KEYS.QUALIFIER_CONFIG, qualifierConfig) }, [qualifierConfig,  ready])
-  useEffect(() => { if (ready) save(KEYS.KNOCKOUT_BRACKET, knockoutBracket) }, [knockoutBracket,  ready])
-  useEffect(() => { if (ready) save(KEYS.TOURNAMENT_FORMAT,tournamentFormat)}, [tournamentFormat, ready])
-  useEffect(() => { if (ready) save(KEYS.SETTINGS,         settings)        }, [settings,         ready])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.PLAYERS,          players)         }, [players])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.GROUPS,           groups)          }, [groups])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.GROUPS_LOCKED,    groupsLocked)    }, [groupsLocked])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.FIXTURES,         fixtures)        }, [fixtures])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.FIXTURE_CONFIG,   fixtureConfig)   }, [fixtureConfig])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.FIXTURES_LOCKED,  fixturesLocked)  }, [fixturesLocked])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.QUALIFIER_CONFIG, qualifierConfig) }, [qualifierConfig])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.KNOCKOUT_BRACKET, knockoutBracket) }, [knockoutBracket])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.TOURNAMENT_FORMAT,tournamentFormat)}, [tournamentFormat])
+  useEffect(() => { if (saveEnabled.current) save(KEYS.SETTINGS,         settings)        }, [settings])
 
   // ── Loading / error screens ───────────────────────────────────────────────
   if (loading || loadError) {
